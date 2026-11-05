@@ -2,12 +2,13 @@ import os
 import tempfile
 import threading
 import unittest
+from unittest.mock import patch
 from http.server import ThreadingHTTPServer
 from urllib.error import HTTPError
 from urllib.request import Request, urlopen
 
 import server as index_server
-from server import IndexStore, parse_html, tokenize_query, validate_public_url
+from server import (IndexStore, discover_sitemap_urls, parse_html, parse_sitemap_document,\n                    tokenize_query, validate_public_url)
 
 
 class SearchIndexTests(unittest.TestCase):
@@ -22,6 +23,43 @@ class SearchIndexTests(unittest.TestCase):
         self.assertNotIn("secret", body)
         self.assertNotIn("menu", body)
         self.assertEqual(links, ["/about"])
+
+    def test_sitemap_parser_reads_urlset_locations(self):
+        kind, locations = parse_sitemap_document(
+            b'<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'
+            b'<url><loc>https://example.org/one</loc></url>'
+            b'<url><loc>https://example.org/two</loc></url></urlset>'
+        )
+        self.assertEqual(kind, "urlset")
+        self.assertEqual(locations, ["https://example.org/one", "https://example.org/two"])
+
+    def test_sitemap_discovery_follows_nested_indexes_and_rejects_other_origins(self):
+        class Robots:
+            def site_maps(self):
+                return ["https://example.org/sitemap-index.xml"]
+
+        index_xml = (
+            b'<sitemapindex><sitemap><loc>https://example.org/nested.xml</loc>'
+            b'</sitemap></sitemapindex>'
+        )
+        nested_xml = (
+            b'<urlset><url><loc>https://example.org/one</loc></url>'
+            b'<url><loc>https://example.org/two</loc></url>'
+            b'<url><loc>https://other.example/page</loc></url></urlset>'
+        )
+
+        def fake_fetch(url, timeout=8):
+            if url.endswith("sitemap-index.xml"):
+                return index_xml, url, "application/xml"
+            if url.endswith("nested.xml"):
+                return nested_xml, url, "application/xml"
+            raise AssertionError("Unexpected sitemap request: " + url)
+
+        with patch("server.fetch_bytes", side_effect=fake_fetch):
+            urls, count = discover_sitemap_urls("https://example.org/", Robots())
+
+        self.assertEqual(count, 2)
+        self.assertEqual(urls, ["https://example.org/one", "https://example.org/two"])
 
     def test_query_tokenizer_removes_operators_and_limits_terms(self):
         self.assertEqual(tokenize_query('Peanut AND browsing "engine"'), ["peanut", "and", "browsing", "engine"])
