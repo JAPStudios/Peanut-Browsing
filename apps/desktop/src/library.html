@@ -54,7 +54,10 @@
             <h2>Edit imported page</h2>
             <p id="source-update-note" class="editor-note" hidden></p>
           </div>
-          <button id="save-page" type="submit">Save corrections</button>
+          <div class="editor-actions">
+            <button id="restore-source" type="button" disabled>Restore original source</button>
+            <button id="save-page" type="submit">Save corrections</button>
+          </div>
         </div>
         <label for="title">Page title</label>
         <input id="title" maxlength="512" type="text">
