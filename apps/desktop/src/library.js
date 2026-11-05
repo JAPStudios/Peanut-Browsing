@@ -46,7 +46,17 @@ function updatePreview() {
     let source = htmlInput.value;
     source = source.replace(/<script\b[^>]*>[\s\S]*?<\/script\s*>/gi, '');
     source = source.replace(/<meta\b[^>]*http-equiv\s*=\s*["']?refresh["']?[^>]*>/gi, '');
-    const policy = '<meta http-equiv="Content-Security-Policy" content="default-src \'none\'; img-src https: data:; style-src https: \'unsafe-inline\'; font-src https: data:; media-src https:; connect-src \'none\'; object-src \'none\'; frame-src \'none\'; form-action \'none\'; base-uri https:">';
+    for (const asset of activePageAssets) {
+        if (!asset.filename || !activeSiteId || !activeAssetToken) continue;
+        const localUrl = 'peanut-asset://' + activeSiteId + '/' + asset.filename + '?token=' + activeAssetToken;
+        const references = [...(asset.references || []), asset.url].filter(Boolean);
+        for (const reference of references) {
+            const escapedReference = reference.replace(/&/g, '&amp;').replace(/"/g, '&quot;');
+            source = source.split(reference).join(localUrl);
+            if (escapedReference !== reference) source = source.split(escapedReference).join(localUrl);
+        }
+    }
+    const policy = '<meta http-equiv="Content-Security-Policy" content="default-src \'none\'; img-src https: data: peanut-asset:; style-src https: peanut-asset: \'unsafe-inline\'; font-src https: data: peanut-asset:; media-src https: peanut-asset:; connect-src \'none\'; object-src \'none\'; frame-src \'none\'; form-action \'none\'; base-uri https:">';
     const base = '<base href="' + baseUrl + '">';
     if (/<head\b[^>]*>/i.test(source)) {
         source = source.replace(/<head\b[^>]*>/i, match => match + policy + base);
