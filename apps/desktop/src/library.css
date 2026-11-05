@@ -27,7 +27,7 @@ h2 { margin: 0 0 13px; font-size: 14px; }
 .item-list { display: flex; flex-direction: column; gap: 6px; }
 .batch-import { margin-bottom: 18px; padding-bottom: 16px; border-bottom: 1px solid #dce0e6; }
 #batch-sites { min-height: 72px; font-size: 11px; }
-#batch-import { width: 100%; margin-top: 6px; font-size: 11px; }
+#batch-import, #export-site { width: 100%; margin-top: 6px; font-size: 11px; }
 .saved-section { margin-top: 20px; padding-top: 15px; border-top: 1px solid #dce0e6; }
 .section-heading { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .small-button { padding: 4px 7px; font-size: 10px; }
