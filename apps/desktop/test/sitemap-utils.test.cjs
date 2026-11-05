@@ -65,6 +65,14 @@ test('allows same-origin assets plus trusted HTTPS Wix media CDNs only', () => {
         normalizeAssetUrl('https://static.wixstatic.com/media/image.png', 'https://example.test').hostname,
         'static.wixstatic.com'
     );
+    assert.equal(
+        normalizeAssetUrl('https://cdn.shopify.com/assets/image.png', 'https://example.test').hostname,
+        'cdn.shopify.com'
+    );
+    assert.equal(
+        normalizeAssetUrl('https://fonts.googleapis.com/css2?family=Inter', 'https://example.test').hostname,
+        'fonts.googleapis.com'
+    );
     assert.equal(normalizeAssetUrl('https://cdn.attacker.test/image.png', 'https://example.test'), null);
     assert.equal(normalizeAssetUrl('http://static.wixstatic.com/image.png', 'https://example.test'), null);
     assert.equal(normalizeAssetUrl('http://127.0.0.1/image.png', 'https://example.test'), null);
