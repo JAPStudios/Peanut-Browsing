@@ -86,6 +86,17 @@ function normalizeAssetUrl(value, requiredOrigin) {
     return trustedCdn ? url : null;
 }
 
+function parseSitemapDeclarations(robotsText, limit = 10) {
+    const addresses = [];
+    for (const line of String(robotsText).split(/\r?\n/)) {
+        const match = line.match(/^\s*sitemap\s*:\s*(\S+)/i);
+        if (!match) continue;
+        addresses.push(match[1]);
+        if (addresses.length >= limit) break;
+    }
+    return addresses;
+}
+
 function decodeXml(value) {
     const decodePoint = number => {
         const point = Number(number);
@@ -111,4 +122,4 @@ function extractSitemapLocations(xml, limit = 2000) {
     return locations;
 }
 
-module.exports = { normalizeHttpUrl, normalizeAssetUrl, decodeXml, extractSitemapLocations, isPublicAddress, assertPublicHostname };
+module.exports = { normalizeHttpUrl, normalizeAssetUrl, parseSitemapDeclarations, decodeXml, extractSitemapLocations, isPublicAddress, assertPublicHostname };
