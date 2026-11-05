@@ -2,7 +2,7 @@ const path = require('node:path');
 const crypto = require('node:crypto');
 const fs = require('node:fs/promises');
 const fetch = require('cross-fetch');
-const { ElectronBlocker } = require('@ghostery/adblocker-electron');
+const { ElectronBlocker, adsAndTrackingLists } = require('@ghostery/adblocker-electron');
 const { app, BaseWindow, BrowserWindow, WebContentsView, ipcMain, Menu, session } = require('electron');
 const { crawlSite } = require('./importer.cjs');
 const { listImportedSites, readImportedPage, saveImportedPage } = require('./import-library.cjs');
@@ -272,11 +272,21 @@ function navigateActive(input) {
 async function loadTrackingProtection() {
     try {
         const cachePath = path.join(app.getPath('userData'), 'tracking-filters.bin');
-        adblocker = await ElectronBlocker.fromPrebuiltAdsAndTracking(fetch, {
-            path: cachePath,
-            read: fs.readFile,
-            write: fs.writeFile
-        });
+        adblocker = await ElectronBlocker.fromLists(
+            fetch,
+            adsAndTrackingLists,
+            {
+                loadCosmeticFilters: false,
+                loadExtendedSelectors: false,
+                loadGenericCosmeticsFilters: false,
+                enableMutationObserver: false
+            },
+            {
+                path: cachePath,
+                read: fs.readFile,
+                write: fs.writeFile
+            }
+        );
         for (const tab of tabs.values()) {
             adblocker.enableBlockingInSession(session.fromPartition(tab.partition));
         }
