@@ -13,7 +13,7 @@ search:
 
 server:
   secret_key: "ultrasecretkey"
-  limiter: true
+  limiter: false
   image_proxy: true
 
 valkey:
