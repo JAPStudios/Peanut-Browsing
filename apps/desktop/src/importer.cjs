@@ -3,6 +3,7 @@ const fs = require('node:fs/promises');
 const path = require('node:path');
 const { app, BrowserWindow } = require('electron');
 const { normalizeHttpUrl, normalizeAssetUrl, decodeXml, extractSitemapLocations, assertPublicHostname } = require('./sitemap-utils.cjs');
+const { mergeImportedPage } = require('./page-record.cjs');
 
 const MAX_PAGES = 250;
 const MAX_HTML_CHARS = 350000;
@@ -252,37 +253,13 @@ async function writePage(directory, page) {
     const id = fingerprint(page.url);
     const filename = id + '.json';
     const pagePath = path.join(directory, filename);
-    const sourceHash = fingerprint([
-        page.title,
-        page.description,
-        page.html,
-        page.textContent
-    ].join('\n'));
-
     let existing = null;
     try {
         existing = JSON.parse(await fs.readFile(pagePath, 'utf8'));
     } catch {
         existing = null;
     }
-    const wasEdited = Boolean(existing && existing.editedAt &&
-        existing.editedHash && existing.editedHash !== existing.sourceHash);
-    const record = {
-        ...page,
-        sourceTitle: page.title,
-        sourceDescription: page.description,
-        sourceHtml: page.html,
-        sourceTextContent: page.textContent,
-        sourceHash,
-        title: wasEdited ? existing.title : page.title,
-        description: wasEdited ? existing.description : page.description,
-        html: wasEdited ? existing.html : page.html,
-        textContent: wasEdited ? existing.textContent : page.textContent,
-        editedHash: wasEdited ? existing.editedHash : sourceHash,
-        editedAt: wasEdited ? existing.editedAt : null,
-        sourceUpdatedSinceEdit: Boolean(wasEdited && existing.sourceHash !== sourceHash),
-        importedAt: new Date().toISOString()
-    };
+    const record = mergeImportedPage(existing, page);
     await fs.writeFile(pagePath, JSON.stringify(record), 'utf8');
     return { id, filename, url: page.url, title: record.title };
 }
