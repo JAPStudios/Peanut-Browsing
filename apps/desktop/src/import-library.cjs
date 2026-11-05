@@ -26,9 +26,18 @@ async function readJson(filePath) {
 }
 
 async function atomicWrite(filePath, value) {
-    const temporaryPath = filePath + '.tmp';
-    await fs.writeFile(temporaryPath, JSON.stringify(value, null, 2), 'utf8');
-    await fs.rename(temporaryPath, filePath);
+    // A fixed ".tmp" name lets overlapping saves overwrite one another's
+    // temporary data. Give every write its own exclusive temporary file.
+    const temporaryPath = filePath + '.' + crypto.randomUUID() + '.tmp';
+    try {
+        await fs.writeFile(temporaryPath, JSON.stringify(value, null, 2), {
+            encoding: 'utf8',
+            flag: 'wx'
+        });
+        await fs.rename(temporaryPath, filePath);
+    } finally {
+        await fs.rm(temporaryPath, { force: true }).catch(() => {});
+    }
 }
 
 async function listImportedSites(importRoot) {
