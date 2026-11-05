@@ -42,7 +42,7 @@ function normalizeHttpUrl(value, requiredOrigin, requiredPathPrefix = '/') {
         /^172\.(1[6-9]|2[0-9]|3[01])\./.test(url.hostname)) return null;
     if (requiredOrigin && url.origin !== requiredOrigin) return null;
     if (requiredPathPrefix && requiredPathPrefix !== '/') {
-        const prefix = requiredPathPrefix.replace(/\\/+$/, '');
+        const prefix = requiredPathPrefix.replace(/\/+$/, '');
         if (url.pathname !== prefix && !url.pathname.startsWith(prefix + '/')) return null;
     }
     url.hash = '';
