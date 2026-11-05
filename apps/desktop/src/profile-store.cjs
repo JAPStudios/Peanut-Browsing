@@ -9,7 +9,9 @@ function normalizeUrl(value) {
     if (typeof value !== 'string' || value.length > 4096) return null;
     try {
         const url = new URL(value);
-        if (!['http:', 'https:'].includes(url.protocol) || url.username || url.password) return null;
+        const isWeb = url.protocol === 'http:' || url.protocol === 'https:';
+        const isAuthoredSite = url.protocol === 'peanut-site:' && /^[a-f0-9]{20}$/.test(url.hostname) && !url.search;
+        if ((!isWeb && !isAuthoredSite) || url.username || url.password) return null;
         url.hash = '';
         return url.href;
     } catch {
@@ -98,7 +100,7 @@ function createProfileStore(filePath) {
     async function toggleBookmark(value, title) {
         await load();
         const url = normalizeUrl(value);
-        if (!url) throw new Error('Only HTTP or HTTPS pages can be bookmarked.');
+        if (!url) throw new Error('This address cannot be bookmarked.');
         const index = data.bookmarks.findIndex(item => item.url === url);
         if (index >= 0) {
             data.bookmarks.splice(index, 1);
