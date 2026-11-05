@@ -121,7 +121,7 @@ export async function previewWebsiteInventory(address) {
             continue;
         }
 
-        const document = await readText(sitemapUrl, MAX_XML_CHARS, 'application/xml,text/xml,application/x-gzip');
+        const document = await readText(sitemapUrl, MAX_XML_CHARS, 'application/xml,text/xml');
         if (document.status !== 'ok') {
             warnings.push('A sitemap could not be read: ' + sitemapUrl.pathname);
             continue;
