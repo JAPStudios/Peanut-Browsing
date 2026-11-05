@@ -25,6 +25,12 @@ h2 { margin: 0 0 13px; font-size: 14px; }
 .column { padding: 18px 14px; background: #f7f8fa; border-right: 1px solid #dce0e6; overflow-y: auto; }
 .pages-column { background: #f2f4f7; }
 .item-list { display: flex; flex-direction: column; gap: 6px; }
+.saved-section { margin-top: 20px; padding-top: 15px; border-top: 1px solid #dce0e6; }
+.section-heading { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.small-button { padding: 4px 7px; font-size: 10px; }
+.saved-row { display: flex; align-items: stretch; gap: 4px; }
+.saved-row .list-item { flex: 1; min-width: 0; }
+.remove-saved { padding: 5px 7px; border-color: transparent; background: transparent; color: #7b4e4e; font-size: 10px; }
 .list-item {
   display: block;
   width: 100%;
