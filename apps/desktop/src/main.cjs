@@ -339,11 +339,11 @@ function attachTabEvents(tab) {
                 .catch(error => console.error('Peanut Browsing could not render search results:', error));
             return;
         }
-        if (!safeWebUrl(destination)) event.preventDefault();
+        if (!safeBrowserUrl(destination)) event.preventDefault();
     });
     contents.on('will-redirect', (event, details) => {
         const destination = typeof details === 'string' ? details : details?.url;
-        if (!safeWebUrl(destination)) event.preventDefault();
+        if (!safeBrowserUrl(destination)) event.preventDefault();
     });
     contents.on('before-input-event', (event, input) => {
         if (input.type !== 'keyDown') return;
@@ -375,7 +375,7 @@ function attachTabEvents(tab) {
         }
     });
     contents.setWindowOpenHandler(({ url }) => {
-        const destination = safeWebUrl(url);
+        const destination = safeBrowserUrl(url);
         if (destination) createTab(destination, true);
         return { action: 'deny' };
     });
