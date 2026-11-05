@@ -230,13 +230,13 @@ def build_fts_query(query: str) -> str:
                 groups.append([])
             continue
         if phrase is not None:
-            tokens = re.findall(r"[\w]{2,}", phrase.casefold(), flags=re.UNICODE)
+            tokens = re.findall(r"[^\W_]{2,}", phrase.casefold(), flags=re.UNICODE)
             tokens = tokens[:max(0, 12 - token_count)]
             if tokens:
                 token_count += len(tokens)
                 groups[-1].append('"' + " ".join(tokens) + '"')
         else:
-            tokens = re.findall(r"[\w]{2,}", plain.casefold(), flags=re.UNICODE)
+            tokens = re.findall(r"[^\W_]{2,}", plain.casefold(), flags=re.UNICODE)
             for token in tokens:
                 if token_count >= 12:
                     break
