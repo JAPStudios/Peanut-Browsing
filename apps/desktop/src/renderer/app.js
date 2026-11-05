@@ -49,10 +49,11 @@ function render(state) {
     forwardButton.disabled = !state.canGoForward;
     reloadButton.textContent = state.loading ? '×' : '↻';
     reloadButton.setAttribute('aria-label', state.loading ? 'Stop loading' : 'Reload');
-    importButton.disabled = Boolean(active?.private);
-    importButton.title = active?.private
-        ? 'Website import is disabled in private tabs'
-        : 'Capture pages from the current website';
+    const canImportWebsite = Boolean(active && !active.private && /^https?:\\/\\//i.test(active.url || ''));
+    importButton.disabled = !canImportWebsite;
+    importButton.title = canImportWebsite
+        ? 'Capture pages from the current website'
+        : 'Open a public website before importing it';
     bookmarkButton.disabled = Boolean(!active || active.private || !/^https?:\/\//i.test(active.url));
     bookmarkButton.textContent = state.isBookmarked ? '★' : '☆';
     bookmarkButton.title = state.isBookmarked ? 'Remove bookmark' : 'Bookmark this page';
