@@ -49,7 +49,8 @@ function render(state) {
     forwardButton.disabled = !state.canGoForward;
     reloadButton.textContent = state.loading ? '×' : '↻';
     reloadButton.setAttribute('aria-label', state.loading ? 'Stop loading' : 'Reload');
-    const canImportWebsite = Boolean(active && !active.private && /^https?:\\/\\//i.test(active.url || ''));
+    const canImportWebsite = Boolean(active && !active.private &&
+        ((active.url || '').startsWith('http://') || (active.url || '').startsWith('https://')));
     importButton.disabled = !canImportWebsite;
     importButton.title = canImportWebsite
         ? 'Capture pages from the current website'
