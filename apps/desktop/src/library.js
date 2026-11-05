@@ -12,6 +12,7 @@ const htmlInput = document.getElementById('html-source');
 const textInput = document.getElementById('text-content');
 const pageUrl = document.getElementById('page-url');
 const previewFrame = document.getElementById('page-preview');
+const assetCountElement = document.getElementById('asset-count');
 const saveButton = document.getElementById('save-page');
 
 let sites = [];
@@ -169,6 +170,7 @@ async function loadPage(pageId) {
         htmlInput.value = page.html || '';
         textInput.value = page.textContent || '';
         pageUrl.textContent = page.url || '';
+        assetCountElement.textContent = 'Captured same-origin assets: ' + (page.assets || []).length;
         activePageUrl = page.url || '';
         updatePreview();
         editor.hidden = false;
