@@ -1,6 +1,7 @@
 const crypto = require('node:crypto');
 const fs = require('node:fs/promises');
 const path = require('node:path');
+const net = require('node:net');
 const { app, BrowserWindow } = require('electron');
 
 const MAX_PAGES = 250;
@@ -16,7 +17,8 @@ function normalizeHttpUrl(value, requiredOrigin) {
     } catch {
         return null;
     }
-    if (!['http:', 'https:'].includes(url.protocol) || url.username || url.password) return null;
+    if (!['http:', 'https:'].includes(url.protocol) || url.username || url.password ||
+        net.isIP(url.hostname)) return null;
     if (url.hostname === 'localhost' || url.hostname.endsWith('.localhost') ||
         url.hostname.endsWith('.local') || url.hostname.includes(':') ||
         /^127\./.test(url.hostname) || /^10\./.test(url.hostname) ||
@@ -115,7 +117,7 @@ async function crawlSite(startAddress, onProgress = () => {}) {
     const errors = [];
 
     try {
-        while (queue.length > 0 && saved.length < MAX_PAGES) {
+        while (queue.length > 0 && visited.size < MAX_PAGES) {
             const address = queue.shift();
             if (visited.has(address)) continue;
             visited.add(address);
