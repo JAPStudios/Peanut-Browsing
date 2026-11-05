@@ -89,6 +89,23 @@ class SearchIndexTests(unittest.TestCase):
             self.assertEqual(result["results"][0]["url"], "https://example.org/peanut")
             self.assertEqual(result["results"][0]["engine"], "Peanut Index")
 
+    def test_search_prioritizes_title_matches(self):
+        with tempfile.TemporaryDirectory() as directory:
+            store = IndexStore(os.path.join(directory, "index.sqlite"))
+            store.upsert(
+                "https://example.org/title",
+                "Privacy Browser",
+                "A general guide to secure web access.",
+            )
+            store.upsert(
+                "https://example.org/body",
+                "General guide",
+                "Privacy browser privacy browser privacy browser",
+            )
+            result = store.search("privacy browser", limit=10)
+            self.assertEqual(result["totalResults"], 2)
+            self.assertEqual(result["results"][0]["url"], "https://example.org/title")
+
     def test_search_returns_pages_matching_any_query_term(self):
         with tempfile.TemporaryDirectory() as directory:
             store = IndexStore(os.path.join(directory, "index.sqlite"))
