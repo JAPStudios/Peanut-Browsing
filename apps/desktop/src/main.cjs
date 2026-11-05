@@ -395,9 +395,9 @@ function registerAssetProtocol() {
         try {
             const url = new URL(request.url);
             const siteId = url.hostname;
-            const filename = decodeURIComponent(url.pathname.replace(/^\\/+/, ''));
+            const filename = decodeURIComponent(url.pathname.replace(/^\/+/, ''));
             if (!/^[a-f0-9]{20}$/.test(siteId) ||
-                !/^[a-f0-9]{64}\\.[a-z0-9]{1,8}$/.test(filename) ||
+                !/^[a-f0-9]{64}\.[a-z0-9]{1,8}$/.test(filename) ||
                 url.searchParams.get('token') !== assetAccessToken) {
                 return new Response('Not found', { status: 404 });
             }
