@@ -18,6 +18,7 @@ let libraryWindow = null;
 let adblocker = null;
 let protectionStatus = 'initializing';
 let profileStore = null;
+let importInProgress = false;
 let activeTabId = null;
 let nextTabId = 1;
 const tabs = new Map();
@@ -398,22 +399,31 @@ function registerIpc() {
     });
     ipcMain.handle('peanut:import-site', async event => {
         if (!isChrome(event)) throw new Error('Not authorised.');
+        if (importInProgress) throw new Error('Another website import is already running.');
         const tab = activeTab();
         if (!tab) throw new Error('No active tab is available.');
-        return crawlSite(tab.view.webContents.getURL(), progress => {
-            if (chromeView && !chromeView.webContents.isDestroyed()) {
-                chromeView.webContents.send('peanut:import-progress', progress);
-            }
-        });
+        importInProgress = true;
+        try {
+            return await crawlSite(tab.view.webContents.getURL(), progress => {
+                if (chromeView && !chromeView.webContents.isDestroyed()) {
+                    chromeView.webContents.send('peanut:import-progress', progress);
+                }
+            });
+        } finally {
+            importInProgress = false;
+        }
     });
     ipcMain.handle('peanut:import-sites', async (event, addresses) => {
         if (!isTrustedUi(event)) throw new Error('Not authorised.');
+        if (importInProgress) throw new Error('Another website import is already running.');
         if (!Array.isArray(addresses)) throw new Error('Provide a list of website addresses.');
         const list = Array.from(new Set(addresses.map(value => String(value || '').trim()).filter(Boolean)));
         if (list.length === 0 || list.length > 10) {
             throw new Error('Provide between 1 and 10 website addresses per batch.');
         }
         const results = [];
+        importInProgress = true;
+        try {
         for (let index = 0; index < list.length; index += 1) {
             const address = list[index];
             const progressHandler = progress => {
