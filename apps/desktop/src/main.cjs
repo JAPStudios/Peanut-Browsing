@@ -369,6 +369,7 @@ function registerIpc() {
         if (!isTrustedUi(event)) throw new Error('Not authorised.');
         const destination = safeWebUrl(value);
         if (!destination) throw new Error('The saved address is not a valid HTTP or HTTPS URL.');
+        if (!windowRef || windowRef.isDestroyed()) createWindow();
         return createTab(destination, true);
     });
     ipcMain.handle('peanut:remove-bookmark', async (event, value) => {
