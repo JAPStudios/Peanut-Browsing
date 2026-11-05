@@ -29,6 +29,12 @@ services:
       - index-data:/data/
     networks:
       - search-backend
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8081/healthz', timeout=2)"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
 
   valkey:
     container_name: peanut-browsing-search-cache
