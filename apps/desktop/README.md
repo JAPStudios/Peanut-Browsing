@@ -12,7 +12,7 @@ Requirements: Node.js 20 or newer, npm.
 4. Run `npm test` to execute the desktop unit tests.
 5. Run `npm start`.
 
-The default search destination is Peanut Browsing's published Wix HTTP search endpoint. It queries only Peanut Browsing's own first-party index. To point the browser at another Peanut Browsing search deployment, set `PEANUT_SEARCH_URL` to its HTTP or HTTPS search URL containing the literal `{query}` placeholder.
+The default search destination is Peanut Browsing's published Wix HTTP search endpoint. It queries only Peanut Browsing's own first-party index. To point the browser at another Peanut Browsing search deployment, set `PEANUT_SEARCH_URL` to its HTTP or HTTPS search URL containing the literal `{query}` placeholder. Search phrases are fetched by the desktop main process and displayed in Peanut Browsing's dedicated local results page; they are not shown as raw JSON. Direct HTTP and HTTPS addresses continue to navigate normally.
 
 ## Current implementation
 
