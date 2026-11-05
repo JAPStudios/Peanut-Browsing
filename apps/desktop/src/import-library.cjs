@@ -7,6 +7,17 @@ const PAGE_ID_PATTERN = /^[a-f0-9]{64}$/;
 const MAX_HTML_CHARS = 350000;
 const MAX_TEXT_CHARS = 120000;
 
+const fileQueues = new Map();
+
+function withFileLock(filePath, operation) {
+    const previous = fileQueues.get(filePath) || Promise.resolve();
+    const current = previous.catch(() => {}).then(operation);
+    fileQueues.set(filePath, current);
+    return current.finally(() => {
+        if (fileQueues.get(filePath) === current) fileQueues.delete(filePath);
+    });
+}
+
 function fingerprint(value) {
     return crypto.createHash('sha256').update(value).digest('hex');
 }
@@ -97,59 +108,63 @@ async function saveImportedPage(importRoot, input) {
 
     const siteDirectory = path.join(importRoot, input.siteId);
     const manifestPath = path.join(siteDirectory, 'manifest.json');
-    const manifest = await readJson(manifestPath);
-    const entry = (manifest.pages || []).find(page => page.id === input.pageId);
-    if (!entry) throw new Error('The imported page was not found.');
-
     const pagePath = path.join(siteDirectory, input.pageId + '.json');
-    const page = await readJson(pagePath);
-    const title = input.title === undefined ? page.title : input.title;
-    const description = input.description === undefined ? page.description : input.description;
-    const html = input.html === undefined ? page.html : input.html;
-    const textContent = input.textContent === undefined ? page.textContent : input.textContent;
 
-    if (typeof title !== 'string' || title.length > 512) throw new Error('The page title must be text of at most 512 characters.');
-    if (typeof description !== 'string' || description.length > 4000) throw new Error('The page description must be text of at most 4,000 characters.');
-    if (typeof html !== 'string' || html.length > MAX_HTML_CHARS) throw new Error('The page HTML exceeds the editor limit.');
-    if (typeof textContent !== 'string' || textContent.length > MAX_TEXT_CHARS) throw new Error('The page text exceeds the editor limit.');
+    // Serialize the read-modify-write cycle for a site's manifest. This keeps
+    // concurrent page corrections from overwriting one another's page titles.
+    return withFileLock(manifestPath, async () => {
+        const manifest = await readJson(manifestPath);
+        const entry = (manifest.pages || []).find(page => page.id === input.pageId);
+        if (!entry) throw new Error('The imported page was not found.');
 
-    const sourceTitle = page.sourceTitle ?? page.title;
-    const sourceDescription = page.sourceDescription ?? page.description;
-    const sourceHtml = page.sourceHtml ?? page.html;
-    const sourceTextContent = page.sourceTextContent ?? page.textContent;
-    const sourceHash = page.sourceHash || fingerprint([
-        sourceTitle, sourceDescription, sourceHtml, sourceTextContent
-    ].join('\n'));
-    const editedHash = fingerprint([title, description, html, textContent].join('\n'));
-    const updated = {
-        ...page,
-        title,
-        description,
-        html,
-        textContent,
-        sourceTitle,
-        sourceDescription,
-        sourceHtml,
-        sourceTextContent,
-        sourceHash,
-        editedHash,
-        sourceUpdatedSinceEdit: false,
-        editedAt: new Date().toISOString()
-    };
-    await atomicWrite(pagePath, updated);
+        const page = await readJson(pagePath);
+        const title = input.title === undefined ? page.title : input.title;
+        const description = input.description === undefined ? page.description : input.description;
+        const html = input.html === undefined ? page.html : input.html;
+        const textContent = input.textContent === undefined ? page.textContent : input.textContent;
 
-    entry.title = title;
-    await atomicWrite(manifestPath, manifest);
+        if (typeof title !== 'string' || title.length > 512) throw new Error('The page title must be text of at most 512 characters.');
+        if (typeof description !== 'string' || description.length > 4000) throw new Error('The page description must be text of at most 4,000 characters.');
+        if (typeof html !== 'string' || html.length > MAX_HTML_CHARS) throw new Error('The page HTML exceeds the editor limit.');
+        if (typeof textContent !== 'string' || textContent.length > MAX_TEXT_CHARS) throw new Error('The page text exceeds the editor limit.');
 
-    return {
-        status: 'saved',
-        siteId: input.siteId,
-        pageId: input.pageId,
-        title: updated.title,
-        editedAt: updated.editedAt
-    };
+        const sourceTitle = page.sourceTitle ?? page.title;
+        const sourceDescription = page.sourceDescription ?? page.description;
+        const sourceHtml = page.sourceHtml ?? page.html;
+        const sourceTextContent = page.sourceTextContent ?? page.textContent;
+        const sourceHash = page.sourceHash || fingerprint([
+            sourceTitle, sourceDescription, sourceHtml, sourceTextContent
+        ].join('\\n'));
+        const editedHash = fingerprint([title, description, html, textContent].join('\\n'));
+        const updated = {
+            ...page,
+            title,
+            description,
+            html,
+            textContent,
+            sourceTitle,
+            sourceDescription,
+            sourceHtml,
+            sourceTextContent,
+            sourceHash,
+            editedHash,
+            sourceUpdatedSinceEdit: false,
+            editedAt: new Date().toISOString()
+        };
+        await atomicWrite(pagePath, updated);
+
+        entry.title = title;
+        await atomicWrite(manifestPath, manifest);
+
+        return {
+            status: 'saved',
+            siteId: input.siteId,
+            pageId: input.pageId,
+            title: updated.title,
+            editedAt: updated.editedAt
+        };
+    });
 }
-
 
 function safeExportSegment(value) {
     let decoded = String(value || '');
@@ -430,28 +445,31 @@ async function createWebsitePage(importRoot, input) {
     validateIds(input.siteId);
     const rawPath = typeof input.path === 'string' ? input.path.trim() : '';
     if (!rawPath || rawPath.length > 100) throw new Error('Enter a page path of 1 to 100 characters.');
-    const segments = rawPath.replace(/^\/+|\/+$/g, '').split('/');
+    const segments = rawPath.replace(/^\\/+|\\/+$/g, '').split('/');
     if (segments.some(segment => !/^[a-z0-9][a-z0-9-]{0,39}$/i.test(segment))) {
         throw new Error('Use letters, numbers and hyphens for each page-path segment.');
     }
     const siteDirectory = path.join(importRoot, input.siteId);
     const manifestPath = path.join(siteDirectory, 'manifest.json');
-    const manifest = await readJson(manifestPath);
-    if (!manifest.authored) throw new Error('New pages can only be added to websites created in Peanut Browsing.');
-    const origin = new URL(manifest.websiteUrl).origin;
-    const url = origin + '/' + segments.map(segment => segment.toLowerCase()).join('/') + '/';
-    if ((manifest.pages || []).some(page => page.url === url)) {
-        throw new Error('That page path already exists in this website.');
-    }
-    const title = segments[segments.length - 1].replace(/-/g, ' ')
-        .replace(/\b[a-z]/g, character => character.toUpperCase());
-    const pageId = fingerprint(url);
-    const page = makeAuthoredPage(url, title);
-    await atomicWrite(path.join(siteDirectory, pageId + '.json'), page);
-    manifest.pages.push({ id: pageId, filename: pageId + '.json', url, title });
-    manifest.pageCount = manifest.pages.length;
-    await atomicWrite(manifestPath, manifest);
-    return { siteId: input.siteId, pageId, url, title, pageCount: manifest.pageCount };
+
+    return withFileLock(manifestPath, async () => {
+        const manifest = await readJson(manifestPath);
+        if (!manifest.authored) throw new Error('New pages can only be added to websites created in Peanut Browsing.');
+        const origin = new URL(manifest.websiteUrl).origin;
+        const url = origin + '/' + segments.map(segment => segment.toLowerCase()).join('/') + '/';
+        if ((manifest.pages || []).some(page => page.url === url)) {
+            throw new Error('That page path already exists in this website.');
+        }
+        const title = segments[segments.length - 1].replace(/-/g, ' ')
+            .replace(/\\b[a-z]/g, character => character.toUpperCase());
+        const pageId = fingerprint(url);
+        const page = makeAuthoredPage(url, title);
+        await atomicWrite(path.join(siteDirectory, pageId + '.json'), page);
+        manifest.pages.push({ id: pageId, filename: pageId + '.json', url, title });
+        manifest.pageCount = manifest.pages.length;
+        await atomicWrite(manifestPath, manifest);
+        return { siteId: input.siteId, pageId, url, title, pageCount: manifest.pageCount };
+    });
 }
 
 module.exports = { listImportedSites, readImportedPage, saveImportedPage, exportImportedSite, createWebsite, createWebsitePage };
