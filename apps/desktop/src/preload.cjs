@@ -2,6 +2,7 @@ const { contextBridge, ipcRenderer } = require('electron');
 
 contextBridge.exposeInMainWorld('peanutBrowser', {
     navigate: value => ipcRenderer.invoke('peanut:navigate', value),
+    importSite: () => ipcRenderer.invoke('peanut:import-site'),
     newTab: () => ipcRenderer.invoke('peanut:new-tab'),
     closeTab: id => ipcRenderer.invoke('peanut:close-tab', id),
     switchTab: id => ipcRenderer.invoke('peanut:switch-tab', id),
@@ -16,5 +17,9 @@ contextBridge.exposeInMainWorld('peanutBrowser', {
     onFocusAddress: callback => {
         if (typeof callback !== 'function') return;
         ipcRenderer.on('peanut:focus-address', () => callback());
+    },
+    onImportProgress: callback => {
+        if (typeof callback !== 'function') return;
+        ipcRenderer.on('peanut:import-progress', (_event, progress) => callback(progress));
     }
 });
