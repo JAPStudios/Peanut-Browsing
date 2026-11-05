@@ -39,8 +39,8 @@ function decodeXml(value) {
     };
     return value.replace(/&amp;/gi, '&').replace(/&quot;/gi, '"')
         .replace(/&apos;|&#39;/gi, "'").replace(/&lt;/gi, '<')
-        .replace(/&gt;/gi, '>').replace(/&#(\\d+);/g, (_, n) => decodePoint(n))
-        .replace(/&#x([\\da-f]+);/gi, (_, n) => decodePoint(parseInt(n, 16)));
+        .replace(/&gt;/gi, '>').replace(/&#(\d+);/g, (_, n) => decodePoint(n))
+        .replace(/&#x([\da-f]+);/gi, (_, n) => decodePoint(parseInt(n, 16)));
 }
 function extractLocations(xml) {
     const locations = [];
