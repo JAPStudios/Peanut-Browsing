@@ -191,7 +191,7 @@ class IndexStore:
             ).fetchone()[0]
             rows = connection.execute(
                 "SELECT title, url, snippet(page_index, 2, '', '', ' … ', 22) AS snippet, "
-                "bm25(page_index) AS rank FROM page_index "
+                "bm25(page_index, 8.0, 0.0, 1.0) AS rank FROM page_index "
                 "WHERE page_index MATCH ? ORDER BY rank LIMIT ? OFFSET ?",
                 (safe_query, limit, offset),
             ).fetchall()
