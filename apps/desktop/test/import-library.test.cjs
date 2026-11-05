@@ -189,6 +189,34 @@ test('creates an independent website, adds pages, then exports the authored site
     assert.ok((await fs.stat(path.join(exported.directory, 'about', 'team', 'index.html'))).isFile());
 });
 
+test('preserves every page when several pages are created at once', async t => {
+    const root = await fs.mkdtemp(path.join(os.tmpdir(), 'peanut-concurrent-pages-'));
+    t.after(() => fs.rm(root, { recursive: true, force: true }));
+
+    const site = await createWebsite(root, { name: 'Concurrent Pages' });
+    const results = await Promise.all([
+        createWebsitePage(root, { siteId: site.id, path: 'about' }),
+        createWebsitePage(root, { siteId: site.id, path: 'contact' }),
+        createWebsitePage(root, { siteId: site.id, path: 'services' }),
+        createWebsitePage(root, { siteId: site.id, path: 'team' })
+    ]);
+
+    assert.equal(results.length, 4);
+    const listed = await listImportedSites(root);
+    assert.equal(listed.length, 1);
+    assert.equal(listed[0].pageCount, 5);
+    assert.deepEqual(
+        new Set(listed[0].pages.map(page => page.url)),
+        new Set([
+            site.websiteUrl,
+            site.websiteUrl + 'about/',
+            site.websiteUrl + 'contact/',
+            site.websiteUrl + 'services/',
+            site.websiteUrl + 'team/'
+        ])
+    );
+});
+
 test('keeps overlapping page saves from sharing a temporary file', async t => {
     const { root, siteId, pageId } = await fixture(t);
     const save = (title, text) => saveImportedPage(root, {
