@@ -167,7 +167,7 @@ test('creates an independent website, adds pages, then exports the authored site
     assert.match(created.pageId, /^[a-f0-9]{64}$/);
     const firstPage = await readImportedPage(root, created.id, created.pageId);
     assert.equal(firstPage.title, 'My Independent Website');
-    assert.match(firstPage.html, /<h1>My Independent Website<\\/h1>/);
+    assert.ok(firstPage.html.includes('<h1>My Independent Website</h1>'));
 
     const about = await createWebsitePage(root, { siteId: created.id, path: 'about/team' });
     assert.equal(about.title, 'Team');
