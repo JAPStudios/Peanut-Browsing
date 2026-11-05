@@ -95,7 +95,8 @@ export async function previewWebsiteInventory(address) {
             if (!match) continue;
             try {
                 const sitemapUrl = publicHttpUrl(new URL(match[1], origin).href);
-                if (sitemapUrl.origin === origin.origin && !sitemapQueue.includes(sitemapUrl.href)) {
+                if (sitemapUrl.origin === origin.origin && !sitemapQueue.includes(sitemapUrl.href) &&
+                    sitemapQueue.length < MAX_SITEMAPS) {
                     sitemapQueue.push(sitemapUrl.href);
                 }
             } catch (error) {
