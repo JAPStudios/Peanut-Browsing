@@ -160,6 +160,9 @@ function safeExportSegment(value) {
 
 function pageExportPath(value, usedPaths) {
     const url = new URL(value);
+    if (!['http:', 'https:'].includes(url.protocol) || url.username || url.password) {
+        throw new Error('An imported page has an invalid source address.');
+    }
     const segments = url.pathname.split('/').filter(Boolean).map(safeExportSegment);
     let outputSegments = segments;
     if (outputSegments.length === 0) {
@@ -245,6 +248,12 @@ async function exportImportedSite(importRoot, siteId, destinationDirectory) {
     const manifest = await readJson(path.join(siteDirectory, 'manifest.json'));
     const sourcePages = Array.isArray(manifest.pages) ? manifest.pages : [];
     if (sourcePages.length === 0) throw new Error('This imported website has no pages to export.');
+    let siteOrigin;
+    try {
+        siteOrigin = new URL(manifest.websiteUrl).origin;
+    } catch {
+        throw new Error('The imported website manifest has an invalid source address.');
+    }
 
     const usedPaths = new Set();
     const pages = [];
@@ -252,9 +261,10 @@ async function exportImportedSite(importRoot, siteId, destinationDirectory) {
     for (const entry of sourcePages) {
         if (!entry || typeof entry.id !== 'string' || !PAGE_ID_PATTERN.test(entry.id)) continue;
         const page = await readJson(path.join(siteDirectory, entry.id + '.json'));
+        const source = new URL(page.url);
+        if (source.origin !== siteOrigin) continue;
         const outputPath = pageExportPath(page.url, usedPaths);
         pages.push({ entry, page, outputPath });
-        const source = new URL(page.url);
         source.hash = '';
         pagePaths.set(source.href, outputPath);
     }
