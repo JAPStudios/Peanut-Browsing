@@ -1,23 +1,23 @@
-# Search upstream review
+# Independent search implementation
 
-Peanut Browsing's production search path is first-party. It does not execute SearXNG, call external search engines, or proxy visitor queries to public metasearch instances.
+Peanut Browsing's search system is developed as Peanut Browsing software. Its search path uses the first-party index service and does not depend on, wrap, embed, proxy through, or incorporate source code from competing search engines or browser products.
 
-The requested upstream organisations are potential sources for selectively adopting compatible capabilities. Their repositories must be assessed individually for purpose, licence, dependencies, security posture, maintenance status, and architectural fit. A GitHub organisation is not a single software package, and its repositories cannot safely be bulk-imported as one unit.
+## First-party architecture
 
-## SearXNG review
+- The website search adapter sends requests to Peanut Browsing's authenticated search gateway.
+- The gateway forwards requests to Peanut Browsing's own index service.
+- The index service crawls explicitly submitted public websites, observes each site's robots.txt policy, and stays within the submitted site's origin.
+- SQLite FTS5 stores searchable page content and BM25 ranks matching pages.
+- Search results identify the engine as Peanut Index.
 
-The SearXNG project is a metasearch engine that aggregates results from external search providers. That model does not meet Peanut Browsing's current first-party search requirement. Consequently, SearXNG is not part of the production search stack, desktop default search path, or Wix search adapter.
+## Development boundary
 
-The previous local SearXNG Compose configuration and its instance settings have been removed from the active project. The SearXNG organisation remains an upstream research reference only. No SearXNG source code is represented as integrated into Peanut Browsing.
+Competitor repositories and products are not implementation dependencies. Their source code, product interfaces, browser engines, search backends, proprietary datasets, and branding must not be copied into Peanut Browsing.
 
-## Integration policy
+Peanut Browsing functionality is to be designed, implemented, tested, documented, and maintained within its own repository. Existing first-party modules should be extended rather than replaced with a competing product or a wrapper around one.
 
-For every candidate repository, record:
-- the exact repository and upstream commit or release;
-- the applicable licence and required notices;
-- the feature being adopted and where it belongs in Peanut Browsing;
-- runtime and development dependencies;
-- security implications and maintenance status;
-- modifications made locally, with attribution and tests.
+## Current search scope
 
-Only compatible, legally reusable components should be incorporated. Unrelated products, demo applications, public-instance directories, deployment infrastructure and historical datasets should not be copied merely because they belong to a requested organisation.
+The first-party crawler indexes pages from explicitly submitted public websites. It reads declared sitemaps, follows same-origin links, respects robots.txt, rejects private or reserved network targets, and applies bounded crawl and content limits.
+
+This is not yet continuous discovery of the entire public web. The production search gateway requires HTTPS reverse-proxy infrastructure before public deployment. These are Peanut Browsing implementation and deployment tasks, not reasons to import another search engine.
