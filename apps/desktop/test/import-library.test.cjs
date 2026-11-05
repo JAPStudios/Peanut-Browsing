@@ -239,6 +239,9 @@ test('keeps overlapping page saves from sharing a temporary file', async t => {
     assert.equal(page.textContent, page.title);
     assert.ok(page.html.includes('<body>' + page.title + '</body>'));
 
+    const listed = await listImportedSites(root);
+    assert.equal(listed[0].pages[0].title, page.title);
+
     const files = await fs.readdir(path.join(root, siteId));
     assert.equal(files.some(file => file.endsWith('.tmp')), false);
 });
