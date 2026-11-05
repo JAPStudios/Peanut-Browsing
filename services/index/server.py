@@ -229,7 +229,7 @@ def build_fts_query(query: str) -> str:
         raise ValueError("Search phrases must contain between 1 and 200 characters.")
     groups = [[]]
     token_count = 0
-    for match in re.finditer(r'"([^"]*)"|(\bOR\b)|([^\s"]+)', query, flags=re.IGNORECASE):
+    for match in re.finditer(r'"([^"]*)"|(\bAND\b|\bOR\b)|([^\s"]+)', query, flags=re.IGNORECASE):
         phrase, operator, plain = match.group(1), match.group(2), match.group(3)
         if operator:
             if operator.upper() == "OR" and groups[-1]:
