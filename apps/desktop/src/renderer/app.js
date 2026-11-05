@@ -56,6 +56,7 @@ document.getElementById('address-form').addEventListener('submit', event => {
     addressElement.blur();
 });
 document.getElementById('new-tab').addEventListener('click', () => api.newTab());
+document.getElementById('open-library').addEventListener('click', () => api.openLibrary());
 backButton.addEventListener('click', () => api.back());
 forwardButton.addEventListener('click', () => api.forward());
 reloadButton.addEventListener('click', () => {
