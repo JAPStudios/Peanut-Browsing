@@ -69,7 +69,7 @@ export async function searchWeb(query, page) {
         results,
         resultCount: results.length,
         indexedResultCount: indexedResults.length,
-        totalResults,
+        totalResults: indexedResults.length ? null : totalResults,
         hasNextPage: results.length >= 20
     };
 }
