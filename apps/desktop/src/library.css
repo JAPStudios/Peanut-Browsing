@@ -26,6 +26,9 @@ h2 { margin: 0 0 13px; font-size: 14px; }
 .pages-column { background: #f2f4f7; }
 .item-list { display: flex; flex-direction: column; gap: 6px; }
 .batch-import { margin-bottom: 18px; padding-bottom: 16px; border-bottom: 1px solid #dce0e6; }
+.batch-import input, .page-create input { margin: 5px 0; font-size: 11px; }
+.batch-import h2:not(:first-child) { margin-top: 18px; }
+.page-create { margin-bottom: 12px; }
 #batch-sites { min-height: 72px; font-size: 11px; }
 #batch-import, #export-site { width: 100%; margin-top: 6px; font-size: 11px; }
 .saved-section { margin-top: 20px; padding-top: 15px; border-top: 1px solid #dce0e6; }
