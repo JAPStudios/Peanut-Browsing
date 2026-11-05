@@ -21,7 +21,7 @@ export async function get_peanutSearch(request) {
         const message = error && typeof error.message === 'string'
             ? error.message
             : 'Peanut Browsing search is temporarily unavailable.';
-        const isInputError = /Enter a search phrase|Search phrases must contain|requested search-results page/.test(message);
+        const isInputError = /Enter a search phrase|Search phrases must contain|at least one search term|requested search-results page/.test(message);
         const payload = { status: 'error', error: message };
         if (isInputError) return badRequest(jsonResponse({}, payload));
         return serverError(jsonResponse({}, payload));
