@@ -28,6 +28,8 @@ jobs:
         run: node --check apps/desktop/src/importer.cjs
       - name: Check imported-site library
         run: node --check apps/desktop/src/import-library.cjs
+      - name: Check browser profile store
+        run: node --check apps/desktop/src/profile-store.cjs
       - name: Check library interface
         run: node --check apps/desktop/src/library.js
       - name: Test imported-site library
