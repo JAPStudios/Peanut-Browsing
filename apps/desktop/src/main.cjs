@@ -94,14 +94,20 @@ async function fetchSearchResults(query, page) {
             headers: { Accept: 'application/json' },
             signal: controller.signal
         });
-        if (!response.ok) {
-            throw new Error('Peanut Browsing search returned HTTP ' + response.status + '.');
-        }
         let payload;
         try {
             payload = await response.json();
         } catch {
+            if (!response.ok) {
+                throw new Error('Peanut Browsing search returned HTTP ' + response.status + '.');
+            }
             throw new Error('Peanut Browsing search returned an unreadable response.');
+        }
+        if (!response.ok) {
+            const message = payload && typeof payload.error === 'string'
+                ? payload.error
+                : 'Peanut Browsing search returned HTTP ' + response.status + '.';
+            throw new Error(message);
         }
         return normalizeSearchPayload(query, payload);
     } catch (error) {
