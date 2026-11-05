@@ -68,3 +68,14 @@ test('allows same-origin assets plus trusted HTTPS Wix media CDNs only', () => {
     assert.equal(normalizeAssetUrl('http://static.wixstatic.com/image.png', 'https://example.test'), null);
     assert.equal(normalizeAssetUrl('http://127.0.0.1/image.png', 'https://example.test'), null);
 });
+
+test('enforces a site path boundary on shared hosting domains', () => {
+    assert.equal(
+        normalizeHttpUrl('https://tenant.wixsite.com/site/about', 'https://tenant.wixsite.com', '/site').pathname,
+        '/site/about'
+    );
+    assert.equal(
+        normalizeHttpUrl('https://tenant.wixsite.com/another-site/', 'https://tenant.wixsite.com', '/site'),
+        null
+    );
+});
