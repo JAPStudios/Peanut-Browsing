@@ -232,7 +232,7 @@ def build_fts_query(query: str) -> str:
     for match in re.finditer(r'"([^"]*)"|(\bOR\b)|([^\s"]+)', query, flags=re.IGNORECASE):
         phrase, operator, plain = match.group(1), match.group(2), match.group(3)
         if operator:
-            if groups[-1]:
+            if operator.upper() == "OR" and groups[-1]:
                 groups.append([])
             continue
         if phrase is not None:
