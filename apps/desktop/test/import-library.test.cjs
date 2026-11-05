@@ -38,7 +38,10 @@ async function fixture(t) {
         description: 'Original description',
         html: '<html><body>Original</body></html>',
         textContent: 'Original',
-        sourceHash: 'initial',
+        sourceTitle: 'Original title',
+        sourceDescription: 'Original description',
+        sourceHtml: '<html><body>Original</body></html>',
+        sourceTextContent: 'Original',
         importedAt: manifest.importedAt
     };
     await fs.writeFile(path.join(siteDirectory, 'manifest.json'), JSON.stringify(manifest));
@@ -79,7 +82,10 @@ test('saves edited page content and updates the manifest title', async t => {
     const page = await readImportedPage(root, siteId, pageId);
     assert.equal(page.title, 'Corrected title');
     assert.equal(page.textContent, 'Corrected');
+    assert.equal(page.sourceHtml, '<html><body>Original</body></html>');
+    assert.equal(page.sourceTextContent, 'Original');
     assert.match(page.sourceHash, /^[a-f0-9]{64}$/);
+    assert.match(page.editedHash, /^[a-f0-9]{64}$/);
 
     const sites = await listImportedSites(root);
     assert.equal(sites[0].pages[0].title, 'Corrected title');
