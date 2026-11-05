@@ -52,7 +52,7 @@ function render(state) {
     importButton.title = active?.private
         ? 'Website import is disabled in private tabs'
         : 'Capture pages from the current website';
-    bookmarkButton.disabled = Boolean(!active || active.private || !/^https?:\\/\\//i.test(active.url));
+    bookmarkButton.disabled = Boolean(!active || active.private || !/^https?:\/\//i.test(active.url));
     bookmarkButton.textContent = state.isBookmarked ? '★' : '☆';
     bookmarkButton.title = state.isBookmarked ? 'Remove bookmark' : 'Bookmark this page';
     statusElement.textContent = state.loading
