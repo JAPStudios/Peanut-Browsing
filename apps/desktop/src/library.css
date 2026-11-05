@@ -72,6 +72,11 @@ input, textarea {
 }
 input:focus, textarea:focus { border-color: #7b8798; box-shadow: 0 0 0 2px rgba(90,108,132,.1); }
 textarea { resize: vertical; line-height: 1.5; }
+.content-builder { display: grid; grid-template-columns: 1fr; gap: 6px; padding: 12px; border: 1px solid #dce0e6; border-radius: 8px; background: #f7f8fa; }
+.content-builder h3 { margin: 0 0 4px; font-size: 13px; }
+.content-builder label { margin-top: 2px; }
+.content-builder textarea { min-height: 70px; }
+.content-builder button { justify-self: start; }
 .source-preview { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 10px; min-height: 360px; }
 .source-editor { min-height: 360px; height: 360px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11px; tab-size: 2; }
 #page-preview { width: 100%; min-width: 0; min-height: 360px; border: 1px solid #cbd1da; border-radius: 7px; background: #fff; }
