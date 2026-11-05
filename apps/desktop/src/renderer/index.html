@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:;">
+  <title>Peanut Browsing</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="browser-chrome">
+    <div class="tab-strip">
+      <div id="tabs" class="tabs" role="tablist" aria-label="Browser tabs"></div>
+      <button id="new-tab" class="new-tab" type="button" aria-label="New tab" title="New tab">+</button>
+    </div>
+    <form id="address-form" class="navigation" autocomplete="off">
+      <button id="back" class="nav-button" type="button" aria-label="Back" title="Back" disabled>‹</button>
+      <button id="forward" class="nav-button" type="button" aria-label="Forward" title="Forward" disabled>›</button>
+      <button id="reload" class="nav-button" type="button" aria-label="Reload" title="Reload">↻</button>
+      <input id="address" type="text" spellcheck="false" placeholder="Search or enter a website address" aria-label="Search or enter a website address">
+      <button id="go" class="go-button" type="submit">Go</button>
+    </form>
+    <div class="status-row">
+      <span id="page-status">Peanut Browsing</span>
+      <span class="status-note">Search service: local SearXNG</span>
+    </div>
+  </header>
+  <script src="app.js"></script>
+</body>
+</html>
