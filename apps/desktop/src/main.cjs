@@ -422,6 +422,29 @@ function registerAssetProtocol() {
     });
 }
 
+async function verifyAssetProtocol() {
+    const siteId = 'a'.repeat(20);
+    const filename = 'b'.repeat(64) + '.txt';
+    const siteDirectory = path.join(app.getPath('userData'), 'imports', siteId);
+    const assetsDirectory = path.join(siteDirectory, 'assets');
+    await fs.mkdir(assetsDirectory, { recursive: true });
+    await fs.writeFile(path.join(assetsDirectory, filename), 'Peanut asset protocol test', 'utf8');
+    await fs.writeFile(path.join(siteDirectory, 'manifest.json'), JSON.stringify({
+        assets: [{ filename, mimeType: 'text/plain' }]
+    }), 'utf8');
+    try {
+        const response = await session.defaultSession.fetch(
+            'peanut-asset://' + siteId + '/' + filename + '?token=' + assetAccessToken
+        );
+        const body = await response.text();
+        if (!response.ok || body !== 'Peanut asset protocol test') {
+            throw new Error('Local asset protocol returned an invalid response.');
+        }
+    } finally {
+        await fs.rm(siteDirectory, { recursive: true, force: true });
+    }
+}
+
 function createLibraryWindow() {
     if (libraryWindow && !libraryWindow.isDestroyed()) {
         libraryWindow.focus();
@@ -642,8 +665,18 @@ app.whenReady().then(async () => {
     registerIpc();
     createWindow();
     if (process.env.PEANUT_CI_TEST === '1') {
-        loadTrackingProtection().then(() => {
-            app.exit(protectionStatus === 'enabled' ? 0 : 1);
+        loadTrackingProtection().then(async () => {
+            if (protectionStatus !== 'enabled') {
+                app.exit(1);
+                return;
+            }
+            try {
+                await verifyAssetProtocol();
+                app.exit(0);
+            } catch (error) {
+                console.error('Local asset protocol verification failed:', error);
+                app.exit(1);
+            }
         });
     } else {
         loadTrackingProtection();
