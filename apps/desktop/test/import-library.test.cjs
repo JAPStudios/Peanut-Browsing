@@ -8,7 +8,9 @@ const {
     listImportedSites,
     readImportedPage,
     saveImportedPage,
-    exportImportedSite
+    exportImportedSite,
+    createWebsite,
+    createWebsitePage
 } = require('../src/import-library.cjs');
 
 async function fixture(t) {
@@ -153,6 +155,38 @@ test('exports corrected pages with local assets and relative internal links', as
     const css = await fs.readFile(path.join(result.directory, 'assets', cssName), 'utf8');
     assert.ok(css.includes('url("' + backgroundName + '")'));
     assert.ok((await fs.stat(path.join(result.directory, 'assets', backgroundName))).isFile());
+});
+
+
+test('creates an independent website, adds pages, then exports the authored site', async t => {
+    const root = await fs.mkdtemp(path.join(os.tmpdir(), 'peanut-author-test-'));
+    t.after(() => fs.rm(root, { recursive: true, force: true }));
+
+    const created = await createWebsite(root, { name: 'My Independent Website' });
+    assert.match(created.id, /^[a-f0-9]{20}$/);
+    assert.match(created.pageId, /^[a-f0-9]{64}$/);
+    const firstPage = await readImportedPage(root, created.id, created.pageId);
+    assert.equal(firstPage.title, 'My Independent Website');
+    assert.match(firstPage.html, /<h1>My Independent Website<\\/h1>/);
+
+    const about = await createWebsitePage(root, { siteId: created.id, path: 'about/team' });
+    assert.equal(about.title, 'Team');
+    assert.equal(about.pageCount, 2);
+    await assert.rejects(
+        createWebsitePage(root, { siteId: created.id, path: '../outside' }),
+        /letters, numbers and hyphens/i
+    );
+    await assert.rejects(
+        createWebsitePage(root, { siteId: created.id, path: 'about/team' }),
+        /already exists/i
+    );
+
+    const destination = await fs.mkdtemp(path.join(os.tmpdir(), 'peanut-author-export-'));
+    t.after(() => fs.rm(destination, { recursive: true, force: true }));
+    const exported = await exportImportedSite(root, created.id, destination);
+    assert.equal(exported.pageCount, 2);
+    assert.ok((await fs.stat(path.join(exported.directory, 'index.html'))).isFile());
+    assert.ok((await fs.stat(path.join(exported.directory, 'about', 'team', 'index.html'))).isFile());
 });
 
 test('rejects path traversal identifiers', async t => {
