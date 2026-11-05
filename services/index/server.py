@@ -70,8 +70,14 @@ def same_origin(left: str, right: str) -> bool:
 
 
 class SafeRedirectHandler(HTTPRedirectHandler):
+    def __init__(self, expected_origin: str):
+        super().__init__()
+        self.expected_origin = expected_origin
+
     def redirect_request(self, request, fp, code, message, headers, new_url):
         validate_public_url(new_url, resolve=True)
+        if not same_origin(self.expected_origin, new_url):
+            raise ValueError("A crawl redirect left the current website origin; the page was skipped.")
         return super().redirect_request(request, fp, code, message, headers, new_url)
 
 
@@ -148,9 +154,11 @@ def fetch_bytes(url: str, timeout: int = 8) -> tuple[bytes, str, str]:
         "User-Agent": USER_AGENT,
         "Accept": "text/html,application/xhtml+xml,text/plain;q=0.8,*/*;q=0.1",
     })
+    parsed = urlsplit(safe_url)
+    expected_origin = urlunsplit((parsed.scheme, parsed.netloc, "/", "", ""))
     opener = build_opener(
         ProxyHandler({}),
-        SafeRedirectHandler(),
+        SafeRedirectHandler(expected_origin),
         PublicHTTPHandler(),
         PublicHTTPSHandler(),
     )
@@ -378,19 +386,46 @@ def crawl_site(seed_url: str, max_pages: int, store: IndexStore):
         if sitemap_url not in queued:
             queued.add(sitemap_url)
             queue.append(sitemap_url)
+
+    # Follow public links across origins while applying each origin's robots
+    # policy and crawl delay independently.
+    robots_by_origin = {origin: robots}
+    last_fetch_by_origin = {}
+    visits_by_origin = {}
     indexed = 0
     visited = 0
-    crawl_delay = robots.crawl_delay(USER_AGENT) or robots.crawl_delay("*") or 0.5
-    delay = min(max(float(crawl_delay), 0.5), 5.0)
+    max_pages_per_origin = 3
 
     while queue and visited < max_pages:
         current = queue.popleft()
-        if not robots.can_fetch(USER_AGENT, current):
+        parts = urlsplit(current)
+        current_origin = urlunsplit((parts.scheme, parts.netloc, "/", "", ""))
+        current_robots = robots_by_origin.get(current_origin)
+        if current_robots is None:
+            try:
+                current_robots = read_robots(current_origin)
+            except (HTTPError, URLError, OSError, ValueError):
+                robots_by_origin[current_origin] = False
+                continue
+            robots_by_origin[current_origin] = current_robots
+        if current_robots is False or not current_robots.can_fetch(USER_AGENT, current):
             continue
+
+        host_key = (parts.hostname or "").lower()
+        if visits_by_origin.get(host_key, 0) >= max_pages_per_origin:
+            continue
+        crawl_delay = current_robots.crawl_delay(USER_AGENT) or current_robots.crawl_delay("*") or 0.5
+        delay = min(max(float(crawl_delay), 0.5), 5.0)
+        elapsed = time.monotonic() - last_fetch_by_origin.get(current_origin, 0)
+        if elapsed < delay:
+            time.sleep(delay - elapsed)
+
         visited += 1
+        visits_by_origin[host_key] = visits_by_origin.get(host_key, 0) + 1
+        last_fetch_by_origin[current_origin] = time.monotonic()
         try:
             payload, final_url, content_type = fetch_bytes(current)
-            if not same_origin(origin, final_url) or "html" not in content_type:
+            if not same_origin(current_origin, final_url) or "html" not in content_type:
                 continue
             title, body, links = parse_html(payload.decode("utf-8", errors="replace"))
             if not body:
@@ -399,20 +434,19 @@ def crawl_site(seed_url: str, max_pages: int, store: IndexStore):
             indexed += 1
             for href in links:
                 try:
-                    candidate = validate_public_url(urljoin(final_url, href))
+                    candidate = urldefrag(validate_public_url(urljoin(final_url, href)))[0]
                 except ValueError:
                     continue
-                candidate = urldefrag(candidate)[0]
-                if same_origin(origin, candidate) and candidate not in queued and len(queued) < max_pages * 8:
+                candidate_parts = urlsplit(candidate)
+                candidate_host = (candidate_parts.hostname or "").lower()
+                if (candidate not in queued and len(queued) < max_pages * 12
+                        and visits_by_origin.get(candidate_host, 0) < max_pages_per_origin):
                     queued.add(candidate)
                     queue.append(candidate)
-        except (HTTPError, URLError, OSError, ValueError):
-            continue
-        if queue and visited < max_pages:
-            time.sleep(delay)
 
     return {"visited": visited, "indexed": indexed, "remaining": len(queue),
-            "sitemapsRead": sitemaps_read, "sitemapPagesDiscovered": len(sitemap_urls)}
+            "sitemapsRead": sitemaps_read, "sitemapPagesDiscovered": len(sitemap_urls),
+            "originsChecked": len(robots_by_origin)}
 
 
 class SearchHandler(BaseHTTPRequestHandler):

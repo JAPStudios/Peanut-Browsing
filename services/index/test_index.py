@@ -144,6 +144,39 @@ class SearchIndexTests(unittest.TestCase):
                 thread.join(timeout=2)
                 index_server.API_KEY = original_key
 
+    def test_crawler_follows_public_links_across_origins_with_each_robots_policy(self):
+        class Robots:
+            def can_fetch(self, agent, url):
+                return True
+            def crawl_delay(self, agent):
+                return 0
+
+        class Store:
+            def __init__(self):
+                self.pages = []
+            def upsert(self, url, title, body):
+                self.pages.append(url)
+
+        def fake_fetch(url, timeout=8):
+            if url == "https://one.example/":
+                return (b'<title>One</title><p>First site</p><a href="https://two.example/page">Two</a>',
+                        url, "text/html")
+            if url == "https://two.example/page":
+                return (b'<title>Two</title><p>Second site</p>', url, "text/html")
+            raise AssertionError("Unexpected fetch: " + url)
+
+        store = Store()
+        with patch("server.read_robots", return_value=Robots()) as robots_reader, \
+             patch("server.discover_sitemap_urls", return_value=([], 0)), \
+             patch("server.fetch_bytes", side_effect=fake_fetch), \
+             patch("server.time.sleep"):
+            result = index_server.crawl_site("https://one.example/", 5, store)
+
+        self.assertEqual(result["indexed"], 2)
+        self.assertEqual(result["originsChecked"], 2)
+        self.assertEqual(store.pages, ["https://one.example/", "https://two.example/page"])
+        robots_reader.assert_called_once_with("https://two.example/")
+
     def test_public_url_validation_rejects_unsafe_destinations(self):
         for value in (
             "file:///etc/passwd",
