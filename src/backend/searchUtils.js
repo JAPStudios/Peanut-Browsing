@@ -45,7 +45,7 @@ export function validateSearchRequest(query, page) {
     }
     const normalizedPage = page === undefined ? 1 :
         (typeof page === 'number' ? page :
-            (typeof page === 'string' && /^[1-9]\\d*$/.test(page) ? Number(page) : NaN));
+            (typeof page === 'string' && /^[1-9]\d*$/.test(page) ? Number(page) : NaN));
     if (!Number.isInteger(normalizedPage) || normalizedPage < 1 || normalizedPage > MAX_PAGE) {
         throw new Error('The requested search-results page is outside the supported range.');
     }
