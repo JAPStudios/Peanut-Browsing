@@ -470,7 +470,6 @@ function createWindow() {
     chromeView.webContents.on('did-finish-load', publishState);
     chromeView.webContents.loadFile(path.join(__dirname, 'renderer', 'index.html'));
 
-    registerIpc();
     createTab();
     windowRef.on('resize', layoutViews);
     windowRef.on('closed', () => {
@@ -489,6 +488,7 @@ app.whenReady().then(async () => {
     profileStore = createProfileStore(path.join(app.getPath('userData'), 'profile.json'));
     await profileStore.load();
     Menu.setApplicationMenu(null);
+    registerIpc();
     createWindow();
     if (process.env.PEANUT_CI_TEST === '1') {
         loadTrackingProtection().then(() => {
