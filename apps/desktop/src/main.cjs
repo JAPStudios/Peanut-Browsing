@@ -690,7 +690,7 @@ function registerIpc() {
     ipcMain.handle('peanut:open-saved-url', (event, value) => {
         if (!isTrustedUi(event)) throw new Error('Not authorised.');
         const destination = safeBrowserUrl(value);
-        if (!destination) throw new Error('The saved address is not a valid HTTP or HTTPS URL.');
+        if (!destination) throw new Error('The saved address is not a valid browser address.');
         if (!windowRef || windowRef.isDestroyed()) createWindow();
         return createTab(destination, true);
     });
