@@ -46,6 +46,8 @@ jobs:
         run: node --input-type=module --check < src/backend/indexedWebsites.jsw
       - name: Check Wix HTTP search endpoint syntax
         run: node --check src/backend/http-functions.js
+      - name: Check Wix page code syntax
+        run: find src/pages -type f -name '*.js' -print0 | xargs -0 -n1 node --check
       - name: Check Electron main process
         run: node --check apps/desktop/src/main.cjs
       - name: Check website importer
