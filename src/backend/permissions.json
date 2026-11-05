@@ -26,19 +26,6 @@
         }
       }
     },
-    "backend/siteInventory.jsw": {
-      "previewWebsiteInventory": {
-        "siteOwner": {
-          "invoke": true
-        },
-        "siteMember": {
-          "invoke": false
-        },
-        "anonymous": {
-          "invoke": false
-        }
-      }
-    },
     "backend/importedPages.jsw": {
       "saveImportedPages": {
         "siteOwner": {
