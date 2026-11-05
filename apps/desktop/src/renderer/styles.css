@@ -1,0 +1,57 @@
+:root {
+  color-scheme: light;
+  font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  background: #f4f5f7;
+  color: #20242b;
+}
+* { box-sizing: border-box; }
+body { margin: 0; overflow: hidden; }
+.browser-chrome {
+  height: 104px;
+  width: 100%;
+  padding: 8px 12px 7px;
+  background: #f4f5f7;
+  border-bottom: 1px solid #d9dde3;
+}
+.tab-strip { display: flex; align-items: center; height: 34px; gap: 8px; }
+.tabs { display: flex; align-items: stretch; gap: 5px; min-width: 0; flex: 1; overflow-x: auto; }
+.tab {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-width: 105px;
+  max-width: 220px;
+  padding: 0 10px;
+  border: 1px solid transparent;
+  border-radius: 8px 8px 0 0;
+  background: #e7e9ed;
+  color: #343943;
+  font-size: 12px;
+  cursor: pointer;
+}
+.tab[aria-selected="true"] { background: #fff; border-color: #d9dde3; border-bottom-color: #fff; }
+.tab-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; text-align: left; }
+.close-tab { border: 0; background: transparent; color: #626a75; cursor: pointer; padding: 1px 3px; border-radius: 4px; }
+.close-tab:hover { background: #d6d9df; }
+.new-tab, .nav-button, .go-button { border: 1px solid #d2d7df; background: #fff; color: #343943; cursor: pointer; }
+.new-tab { width: 28px; height: 27px; border-radius: 7px; font-size: 19px; line-height: 18px; }
+.navigation { display: flex; align-items: center; gap: 7px; height: 38px; }
+.nav-button { width: 31px; height: 31px; border-radius: 8px; font-size: 19px; line-height: 18px; }
+.nav-button:disabled { opacity: .38; cursor: default; }
+#address {
+  flex: 1;
+  min-width: 0;
+  height: 32px;
+  border: 1px solid #cbd1da;
+  border-radius: 9px;
+  background: #fff;
+  color: #20242b;
+  padding: 0 13px;
+  font-size: 13px;
+  outline: none;
+}
+#address:focus { border-color: #7b8798; box-shadow: 0 0 0 2px rgba(90, 108, 132, .12); }
+.go-button { height: 31px; padding: 0 14px; border-radius: 8px; font-size: 12px; }
+.status-row { display: flex; align-items: center; justify-content: space-between; height: 17px; padding: 2px 2px 0; color: #5c6470; font-size: 10px; }
+.status-note { color: #78818e; }
+button:focus-visible, input:focus-visible { outline: 2px solid #657b9a; outline-offset: 2px; }
