@@ -25,8 +25,11 @@ export async function searchWeb(query, page) {
     const endpoint = await readSecret(SEARCH_ENDPOINT_SECRET, true);
     const apiKey = await readSecret(SEARCH_API_KEY_SECRET, true);
     const url = buildSearchUrl(endpoint, request.query, request.page);
-    const headers = { Accept: 'application/json' };
-    headers['X-API-Key'] = apiKey;
+    const headers = { Accept: 'application/json', 'X-API-Key': apiKey };
+    const indexUrl = new URL('/index/search', endpoint.origin);
+    indexUrl.searchParams.set('q', request.query);
+    indexUrl.searchParams.set('limit', '20');
+    indexUrl.searchParams.set('offset', String((request.page - 1) * 20));
 
     let response;
     try {
@@ -40,7 +43,23 @@ export async function searchWeb(query, page) {
     try { payload = await response.json(); } catch (error) {
         throw new Error('The Peanut Browsing search service returned unreadable data.');
     }
-    const results = normalizeSearchResults(payload.results);
+    let indexedResults = [];
+    try {
+        const indexResponse = await fetch(indexUrl.href, { method: 'get', headers });
+        if (indexResponse.ok) {
+            const indexPayload = await indexResponse.json();
+            if (indexPayload && Array.isArray(indexPayload.results)) {
+                indexedResults = indexPayload.results.map(result => ({
+                    ...result,
+                    content: typeof result.snippet === 'string' ? result.snippet : ''
+                }));
+            }
+        }
+    } catch (error) {
+        // Metasearch remains available if the first-party index is temporarily offline.
+    }
+
+    const results = normalizeSearchResults(indexedResults.concat(payload.results));
     const reportedCount = Number(payload.number_of_results);
     const totalResults = Number.isFinite(reportedCount) && reportedCount >= 0 ? reportedCount : null;
     return {
@@ -49,6 +68,7 @@ export async function searchWeb(query, page) {
         page: request.page,
         results,
         resultCount: results.length,
+        indexedResultCount: indexedResults.length,
         totalResults,
         hasNextPage: results.length >= 20
     };
