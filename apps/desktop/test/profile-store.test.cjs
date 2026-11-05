@@ -18,6 +18,9 @@ test('normalizes HTTP URLs and rejects executable schemes', () => {
     assert.equal(normalizeUrl('https://example.test/page#section'), 'https://example.test/page');
     assert.equal(normalizeUrl('javascript:alert(1)'), null);
     assert.equal(normalizeUrl('file:///tmp/page.html'), null);
+    assert.equal(normalizeUrl('peanut-site://0123456789abcdefabcd/about/'), 'peanut-site://0123456789abcdefabcd/about/');
+    assert.equal(normalizeUrl('peanut-site://invalid/about/'), null);
+    assert.equal(normalizeUrl('peanut-site://0123456789abcdefabcd/?q=blocked'), null);
 });
 
 test('records normal browsing history but excludes private tabs', async t => {
