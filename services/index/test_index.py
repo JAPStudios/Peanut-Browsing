@@ -1,4 +1,5 @@
 import os
+import socket
 import tempfile
 import threading
 import unittest
@@ -106,12 +107,12 @@ class SearchIndexTests(unittest.TestCase):
             self.assertEqual(result["totalResults"], 2)
             self.assertEqual(result["results"][0]["url"], "https://example.org/title")
 
-    def test_search_returns_pages_matching_any_query_term(self):
+    def test_search_returns_pages_matching_explicit_or_terms(self):
         with tempfile.TemporaryDirectory() as directory:
             store = IndexStore(os.path.join(directory, "index.sqlite"))
             store.upsert("https://example.org/peanut", "Peanut project", "A nut-related page.")
             store.upsert("https://example.org/browsing", "Browsing project", "A browser-related page.")
-            result = store.search("peanut browsing", limit=10)
+            result = store.search("peanut OR browsing", limit=10)
             self.assertEqual(result["totalResults"], 2)
             self.assertEqual(
                 {item["url"] for item in result["results"]},
@@ -169,6 +170,9 @@ class SearchIndexTests(unittest.TestCase):
         with patch("server.read_robots", return_value=Robots()) as robots_reader, \
              patch("server.discover_sitemap_urls", return_value=([], 0)), \
              patch("server.fetch_bytes", side_effect=fake_fetch), \
+             patch("server.socket.getaddrinfo", return_value=[
+                 (socket.AF_INET, socket.SOCK_STREAM, socket.IPPROTO_TCP, "", ("8.8.8.8", 443))
+             ]), \
              patch("server.time.sleep"):
             result = index_server.crawl_site("https://one.example/", 5, store)
 
