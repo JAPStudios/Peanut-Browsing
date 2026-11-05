@@ -18,6 +18,9 @@
   <main class="workspace">
     <section class="column sites-column">
       <section class="batch-import">
+        <h2>Create a website</h2>
+        <input id="new-site-name" type="text" maxlength="80" placeholder="Website name">
+        <button id="create-site" type="button">Create website</button>
         <h2>Import websites</h2>
         <textarea id="batch-sites" rows="4" placeholder="Enter one website address per line"></textarea>
         <button id="batch-import" type="button">Import listed websites</button>
@@ -40,6 +43,10 @@
     </section>
     <section class="column pages-column">
       <h2>Pages</h2>
+      <div class="page-create">
+        <input id="new-page-path" type="text" maxlength="100" placeholder="Page path, e.g. about">
+        <button id="create-page" type="button" disabled>Add page</button>
+      </div>
       <div id="pages" class="item-list" aria-label="Imported pages"></div>
     </section>
     <section class="editor-column">
