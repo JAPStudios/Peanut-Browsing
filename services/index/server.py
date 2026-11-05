@@ -162,7 +162,13 @@ class IndexStore:
                 (title[:500], url, body[:MAX_TEXT_CHARS]),
             )
 
+    def count(self):
+        with self.connect() as connection:
+            return connection.execute("SELECT COUNT(*) FROM page_index").fetchone()[0]
+
     def search(self, query: str, limit: int = DEFAULT_SEARCH_LIMIT, offset: int = 0):
+        if not isinstance(query, str) or len(query) > 200:
+            raise ValueError("Search phrases must contain between 1 and 200 characters.")
         tokens = tokenize_query(query)
         if not tokens:
             raise ValueError("Enter at least one search term containing two or more characters.")
@@ -275,9 +281,7 @@ class SearchHandler(BaseHTTPRequestHandler):
     def do_GET(self):
         parsed = urlsplit(self.path)
         if parsed.path == "/healthz":
-            self.send_json(200, {"status": "ok", "indexedPages": self.server.store.connect().execute(
-                "SELECT COUNT(*) FROM page_index"
-            ).fetchone()[0]})
+            self.send_json(200, {"status": "ok", "indexedPages": self.server.store.count()})
             return
         if parsed.path != "/search":
             self.send_json(404, {"status": "error", "error": "Not found."})
@@ -307,6 +311,8 @@ class SearchHandler(BaseHTTPRequestHandler):
             if length < 1 or length > 8192:
                 raise ValueError("The crawl request must contain a small JSON body.")
             payload = json.loads(self.rfile.read(length).decode("utf-8"))
+            if not isinstance(payload, dict):
+                raise ValueError("The crawl request must be a JSON object.")
             seed_url = payload.get("url")
             max_pages = int(payload.get("maxPages", DEFAULT_CRAWL_PAGES))
             if not 1 <= max_pages <= MAX_CRAWL_PAGES:
