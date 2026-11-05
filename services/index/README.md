@@ -4,7 +4,7 @@ This is Peanut Browsing's own searchable page index. Search uses SQLite FTS5 wit
 
 ## Capabilities
 
-- Crawl explicitly submitted public websites, staying on each submitted website's origin.
+- Discover sitemap declarations in `robots.txt`, follow nested same-origin sitemap indexes, then crawl explicitly submitted public websites.\n- Stay on each submitted website's origin during sitemap discovery and page crawling.
 - Read and obey `robots.txt`; stop if the robots policy cannot be checked.
 - Reject local, private, loopback, reserved, credential-bearing, and non-HTTP(S) targets.
 - Limit each crawl to 25 pages, 2 MiB per page, plus bounded extracted text.
@@ -12,7 +12,7 @@ This is Peanut Browsing's own searchable page index. Search uses SQLite FTS5 wit
 - Rank matching pages using SQLite's BM25 implementation.
 - Require the search gateway API key for search and crawl requests.
 
-The crawler follows links within the submitted website. It does not automatically discover the entire public web. A website must be submitted as a seed before its pages can appear in search results.
+The crawler reads up to 10 sitemap documents and discovers up to 1,000 same-origin sitemap URLs per submission, then follows links within the submitted website. It still does not automatically discover the entire public web. A website must be submitted as a seed before its pages can appear in search results.
 
 ## API
 
