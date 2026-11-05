@@ -30,3 +30,10 @@ footer { border-top: 1px solid #dfe3e8; padding-top: 16px; color: #7a838e; font-
   .result-snippet { color: #c7cdd4; }
   .summary, .product-label, footer, .empty { color: #9ca6b2; }
 }
+
+.pagination { display: flex; gap: 18px; padding: 4px 0 28px; }
+.page-link { color: #1459a6; font-size: 14px; font-weight: 600; text-decoration: none; }
+.page-link:hover { text-decoration: underline; }
+@media (prefers-color-scheme: dark) {
+  .page-link { color: #8abaff; }
+}
