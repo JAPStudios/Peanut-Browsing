@@ -33,9 +33,14 @@ jobs:
       - name: Resolve desktop dependencies
         working-directory: apps/desktop
         run: npm install --package-lock=false --no-audit --no-fund
-      - name: Verify Electron runtime
+      - name: Configure Electron sandbox for CI
         working-directory: apps/desktop
-        run: npx electron --version
+        run: |
+          sudo chown root:root node_modules/electron/dist/chrome-sandbox
+          sudo chmod 4755 node_modules/electron/dist/chrome-sandbox
+      - name: Verify Electron package
+        working-directory: apps/desktop
+        run: node -p "require('electron/package.json').version"
       - name: Smoke-test desktop startup
         working-directory: apps/desktop
         run: |
