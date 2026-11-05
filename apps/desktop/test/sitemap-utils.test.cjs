@@ -4,7 +4,8 @@ const assert = require('node:assert/strict');
 const {
     normalizeHttpUrl,
     decodeXml,
-    extractSitemapLocations
+    extractSitemapLocations,
+    isPublicAddress
 } = require('../src/sitemap-utils.cjs');
 
 test('accepts same-origin HTTP addresses and strips fragments', () => {
@@ -39,4 +40,16 @@ test('respects a caller-supplied sitemap location limit', () => {
     const xml = '<urlset><url><loc>https://example.test/a</loc></url>' +
         '<url><loc>https://example.test/b</loc></url></urlset>';
     assert.deepEqual(extractSitemapLocations(xml, 1), ['https://example.test/a']);
+});
+
+test('classifies public and non-public IP address ranges', () => {
+    assert.equal(isPublicAddress('8.8.8.8'), true);
+    assert.equal(isPublicAddress('2606:4700:4700::1111'), true);
+    assert.equal(isPublicAddress('127.0.0.1'), false);
+    assert.equal(isPublicAddress('10.0.0.1'), false);
+    assert.equal(isPublicAddress('192.168.1.1'), false);
+    assert.equal(isPublicAddress('169.254.1.1'), false);
+    assert.equal(isPublicAddress('::1'), false);
+    assert.equal(isPublicAddress('fc00::1'), false);
+    assert.equal(isPublicAddress('fe80::1'), false);
 });
