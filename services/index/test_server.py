@@ -61,7 +61,7 @@ class FirstPartySearchTests(unittest.TestCase):
         self.assertEqual(result["results"][0]["url"], "https://peanut.example/browser")
 
     def test_quoted_phrase_is_matched_as_a_phrase(self):
-        store = IndexStore(":memory:")
+        store = self.store
         store.upsert("https://peanut.example/exact", "Peanut Browsing", "Create independent websites")
         store.upsert("https://peanut.example/separate", "Peanut and browsing", "Two words separated by another term")
         result = store.search('"peanut browsing"')
@@ -73,7 +73,7 @@ class FirstPartySearchTests(unittest.TestCase):
         self.assertEqual(expression, '"peanut" AND "browser search" AND "or" AND "index"')
 
     def test_rejects_queries_without_searchable_terms(self):
-        store = IndexStore(":memory:")
+        store = self.store
         with self.assertRaisesRegex(ValueError, "at least one search term"):
             store.search("a + -")
 
