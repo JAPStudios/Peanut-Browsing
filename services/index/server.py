@@ -217,12 +217,6 @@ def parse_html(source: str) -> tuple[str, str, list[str]]:
     return title, body, parser.links
 
 
-def tokenize_query(query: str) -> list[str]:
-    if not isinstance(query, str):
-        return []
-    return re.findall(r"[\w]{2,}", query.casefold(), flags=re.UNICODE)[:12]
-
-
 def build_fts_query(query: str) -> str:
     """Build a bounded FTS5 expression with AND terms, OR groups, and quoted phrases."""
     if not isinstance(query, str) or len(query) > 200:
