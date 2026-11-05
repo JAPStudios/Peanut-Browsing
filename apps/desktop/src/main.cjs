@@ -543,7 +543,7 @@ function registerAuthoredSiteProtocol() {
         try {
             const url = new URL(request.url);
             const siteId = url.hostname;
-            if (!/^[a-f0-9]{20}$/.test(siteId) || url.username || url.password || url.search) {
+            if (!/^[a-f0-9]{20}$/.test(siteId) || url.username || url.password || url.search.length > 2048) {
                 return new Response('Not found', { status: 404 });
             }
             const siteDirectory = path.join(app.getPath('userData'), 'imports', siteId);
