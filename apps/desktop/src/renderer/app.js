@@ -7,6 +7,7 @@ const backButton = document.getElementById('back');
 const forwardButton = document.getElementById('forward');
 const reloadButton = document.getElementById('reload');
 const importButton = document.getElementById('import-site');
+const bookmarkButton = document.getElementById('bookmark-page');
 let latestState = null;
 
 function makeTab(tab, activeTabId) {
@@ -51,6 +52,9 @@ function render(state) {
     importButton.title = active?.private
         ? 'Website import is disabled in private tabs'
         : 'Capture pages from the current website';
+    bookmarkButton.disabled = Boolean(!active || active.private || !/^https?:\\/\\//i.test(active.url));
+    bookmarkButton.textContent = state.isBookmarked ? '★' : '☆';
+    bookmarkButton.title = state.isBookmarked ? 'Remove bookmark' : 'Bookmark this page';
     statusElement.textContent = state.loading
         ? 'Loading page…'
         : (active?.private ? 'Private browsing' : (active?.title || 'Peanut Browsing'));
@@ -67,6 +71,14 @@ document.getElementById('address-form').addEventListener('submit', event => {
         statusElement.textContent = error.message || 'Navigation could not be started.';
     });
     addressElement.blur();
+});
+bookmarkButton.addEventListener('click', async () => {
+    try {
+        const bookmarked = await api.toggleBookmark();
+        statusElement.textContent = bookmarked ? 'Bookmark saved.' : 'Bookmark removed.';
+    } catch (error) {
+        statusElement.textContent = error.message || 'Bookmark could not be changed.';
+    }
 });
 document.getElementById('new-tab').addEventListener('click', () => api.newTab());
 document.getElementById('new-private-tab').addEventListener('click', () => api.newPrivateTab());
