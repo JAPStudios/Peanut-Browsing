@@ -20,6 +20,8 @@ jobs:
           node-version: 22
       - name: Check Electron main process
         run: node --check apps/desktop/src/main.cjs
+      - name: Check website importer
+        run: node --check apps/desktop/src/importer.cjs
       - name: Check preload bridge
         run: node --check apps/desktop/src/preload.cjs
       - name: Check renderer
