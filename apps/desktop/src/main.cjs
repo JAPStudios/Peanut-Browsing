@@ -22,7 +22,9 @@ const { createProfileStore, normalizeUrl } = require('./profile-store.cjs');
 
 const TOOLBAR_HEIGHT = 104;
 const NEW_TAB_FILE = path.join(__dirname, 'newtab.html');
+const SEARCH_PAGE_FILE = path.join(__dirname, 'search.html');
 const SEARCH_TEMPLATE = process.env.PEANUT_SEARCH_URL || 'https://japbstudios.wixsite.com/peanut-browsing/_functions/peanutSearch?q={query}&page=1';
+const { normalizeSearchPayload } = require('./search-page.cjs');
 
 let windowRef;
 let chromeView;
@@ -67,7 +69,66 @@ function resolveInput(value) {
     }
     const searchBase = safeWebUrl(SEARCH_TEMPLATE.replace('{query}', 'query'));
     if (!searchBase) throw new Error('The configured search endpoint must be a valid HTTP or HTTPS URL.');
-    return SEARCH_TEMPLATE.replace('{query}', encodeURIComponent(input));
+    return null;
+}
+
+function searchStateFromUrl(value) {
+    try {
+        const url = new URL(value);
+        if (url.protocol !== 'file:' || !url.pathname.endsWith('/search.html') || !url.hash) return null;
+        return JSON.parse(decodeURIComponent(url.hash.slice(1)));
+    } catch {
+        return null;
+    }
+}
+
+function searchDisplayUrl(query, page) {
+    return 'peanut-search://results/?q=' + encodeURIComponent(query) + '&page=' + page;
+}
+
+async function fetchSearchResults(query, page) {
+    const requestUrl = new URL(SEARCH_TEMPLATE.replace('{query}', encodeURIComponent(query)));
+    requestUrl.searchParams.set('page', String(page));
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 20000);
+    try {
+        const response = await fetch(requestUrl.href, {
+            method: 'GET',
+            headers: { Accept: 'application/json' },
+            signal: controller.signal
+        });
+        if (!response.ok) {
+            throw new Error('Peanut Browsing search returned HTTP ' + response.status + '.');
+        }
+        let payload;
+        try {
+            payload = await response.json();
+        } catch {
+            throw new Error('Peanut Browsing search returned an unreadable response.');
+        }
+        return normalizeSearchPayload(query, payload);
+    } catch (error) {
+        if (error.name === 'AbortError') throw new Error('Peanut Browsing search timed out. Try again.');
+        throw error;
+    } finally {
+        clearTimeout(timeout);
+    }
+}
+
+async function showSearchResults(tab, query, page = 1) {
+    const results = await fetchSearchResults(query, page);
+    tab.searchQuery = query;
+    tab.searchPage = page;
+    tab.loading = true;
+    publishState();
+    await tab.view.webContents.loadFile(SEARCH_PAGE_FILE, {
+        hash: encodeURIComponent(JSON.stringify(results))
+    });
+    tab.url = searchDisplayUrl(query, page);
+    tab.title = 'Peanut Search — ' + query;
+    tab.loading = false;
+    publishState();
+    return true;
 }
 
 function activeTab() {
@@ -185,18 +246,31 @@ function attachTabEvents(tab) {
         publishState();
     });
     contents.on('did-navigate', (_event, url) => {
-        tab.url = url;
-        if (profileStore) {
-            profileStore.recordVisit(url, tab.title, tab.private)
-                .then(publishState).catch(error => console.error('Could not record browsing history:', error));
+        const searchState = searchStateFromUrl(url);
+        if (searchState && typeof searchState.query === 'string') {
+            tab.searchQuery = searchState.query;
+            tab.searchPage = 1;
+            tab.url = searchDisplayUrl(searchState.query, 1);
+            tab.title = 'Peanut Search — ' + searchState.query;
+        } else {
+            tab.searchQuery = null;
+            tab.url = url;
+            if (profileStore && /^https?:\\/\\//i.test(url)) {
+                profileStore.recordVisit(url, tab.title, tab.private)
+                    .then(publishState).catch(error => console.error('Could not record browsing history:', error));
+            }
         }
         publishState();
     });
     contents.on('did-navigate-in-page', (_event, url) => {
-        tab.url = url;
-        if (profileStore) {
-            profileStore.recordVisit(url, tab.title, tab.private)
-                .then(publishState).catch(error => console.error('Could not record browsing history:', error));
+        const searchState = searchStateFromUrl(url);
+        if (searchState && typeof searchState.query === 'string') {
+            tab.searchQuery = searchState.query;
+            tab.searchPage = 1;
+            tab.url = searchDisplayUrl(searchState.query, 1);
+            tab.title = 'Peanut Search — ' + searchState.query;
+        } else {
+            tab.url = url;
         }
         publishState();
     });
@@ -206,8 +280,17 @@ function attachTabEvents(tab) {
     });
     contents.on('did-stop-loading', () => {
         tab.loading = false;
-        tab.url = contents.getURL();
-        tab.title = contents.getTitle() || tab.title;
+        const currentUrl = contents.getURL();
+        const searchState = searchStateFromUrl(currentUrl);
+        if (searchState && typeof searchState.query === 'string') {
+            tab.searchQuery = searchState.query;
+            tab.searchPage = 1;
+            tab.url = searchDisplayUrl(searchState.query, 1);
+            tab.title = 'Peanut Search — ' + searchState.query;
+        } else {
+            tab.url = currentUrl;
+            tab.title = contents.getTitle() || tab.title;
+        }
         publishState();
     });
     contents.on('render-process-gone', () => {
@@ -347,18 +430,33 @@ function closeTab(id) {
     return true;
 }
 
-function navigateActive(input) {
+async function navigateActive(input) {
     const tab = activeTab();
     if (!tab) throw new Error('No active tab is available.');
-    const destination = resolveInput(input);
-    if (!destination) return false;
-    tab.loading = true;
-    tab.view.webContents.loadURL(destination).catch(() => {
+    const value = String(input || '').trim();
+    if (!value) return false;
+    const destination = resolveInput(value);
+    if (destination) {
+        tab.searchQuery = null;
+        tab.searchPage = 1;
+        tab.loading = true;
+        publishState();
+        try {
+            await tab.view.webContents.loadURL(destination);
+            return true;
+        } catch (error) {
+            tab.loading = false;
+            publishState();
+            throw error;
+        }
+    }
+    try {
+        return await showSearchResults(tab, value, 1);
+    } catch (error) {
         tab.loading = false;
         publishState();
-    });
-    publishState();
-    return true;
+        throw error;
+    }
 }
 
 async function loadTrackingProtection() {
