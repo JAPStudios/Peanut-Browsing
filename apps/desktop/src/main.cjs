@@ -6,6 +6,7 @@ const { ElectronBlocker, adsAndTrackingLists } = require('@ghostery/adblocker-el
 const { app, BaseWindow, BrowserWindow, WebContentsView, ipcMain, Menu, session } = require('electron');
 const { crawlSite } = require('./importer.cjs');
 const { listImportedSites, readImportedPage, saveImportedPage } = require('./import-library.cjs');
+const { createProfileStore } = require('./profile-store.cjs');
 
 const TOOLBAR_HEIGHT = 104;
 const NEW_TAB_FILE = path.join(__dirname, 'newtab.html');
@@ -16,6 +17,7 @@ let chromeView;
 let libraryWindow = null;
 let adblocker = null;
 let protectionStatus = 'initializing';
+let profileStore = null;
 let activeTabId = null;
 let nextTabId = 1;
 const tabs = new Map();
@@ -70,7 +72,9 @@ function browserState() {
         canGoBack: active ? active.view.webContents.navigationHistory.canGoBack() : false,
         canGoForward: active ? active.view.webContents.navigationHistory.canGoForward() : false,
         loading: active ? Boolean(active.loading) : false,
-        trackingProtection: protectionStatus
+        trackingProtection: protectionStatus,
+        isBookmarked: Boolean(active && profileStore &&
+            profileStore.getState().bookmarks.some(item => item.url === active.url))
     };
 }
 
@@ -99,14 +103,26 @@ function attachTabEvents(tab) {
 
     contents.on('page-title-updated', (_event, title) => {
         tab.title = title || 'Untitled';
+        if (profileStore && tab.url) {
+            profileStore.updateHistoryTitle(tab.url, tab.title, tab.private)
+                .then(publishState).catch(error => console.error('Could not update browsing history:', error));
+        }
         publishState();
     });
     contents.on('did-navigate', (_event, url) => {
         tab.url = url;
+        if (profileStore) {
+            profileStore.recordVisit(url, tab.title, tab.private)
+                .then(publishState).catch(error => console.error('Could not record browsing history:', error));
+        }
         publishState();
     });
     contents.on('did-navigate-in-page', (_event, url) => {
         tab.url = url;
+        if (profileStore) {
+            profileStore.recordVisit(url, tab.title, tab.private)
+                .then(publishState).catch(error => console.error('Could not record browsing history:', error));
+        }
         publishState();
     });
     contents.on('did-start-loading', () => {
@@ -337,6 +353,36 @@ function registerIpc() {
         if (!isChrome(event)) throw new Error('Not authorised.');
         createLibraryWindow();
     });
+    ipcMain.handle('peanut:toggle-bookmark', async event => {
+        if (!isChrome(event)) throw new Error('Not authorised.');
+        const tab = activeTab();
+        if (!tab || tab.private) throw new Error('Bookmarks are unavailable in private tabs.');
+        const bookmarked = await profileStore.toggleBookmark(tab.url, tab.title);
+        publishState();
+        return bookmarked;
+    });
+    ipcMain.handle('peanut:list-profile', event => {
+        if (!isTrustedUi(event)) throw new Error('Not authorised.');
+        return profileStore.getState();
+    });
+    ipcMain.handle('peanut:open-saved-url', (event, value) => {
+        if (!isTrustedUi(event)) throw new Error('Not authorised.');
+        const destination = safeWebUrl(value);
+        if (!destination) throw new Error('The saved address is not a valid HTTP or HTTPS URL.');
+        return createTab(destination, true);
+    });
+    ipcMain.handle('peanut:remove-bookmark', async (event, value) => {
+        if (!isTrustedUi(event)) throw new Error('Not authorised.');
+        const result = await profileStore.removeBookmark(value);
+        publishState();
+        return result;
+    });
+    ipcMain.handle('peanut:clear-history', async event => {
+        if (!isTrustedUi(event)) throw new Error('Not authorised.');
+        const result = await profileStore.clearHistory();
+        publishState();
+        return result;
+    });
     ipcMain.handle('peanut:list-imports', event => {
         if (!isTrustedUi(event)) throw new Error('Not authorised.');
         return listImportedSites(importRoot());
@@ -439,7 +485,9 @@ function createWindow() {
     windowRef.show();
 }
 
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
+    profileStore = createProfileStore(path.join(app.getPath('userData'), 'profile.json'));
+    await profileStore.load();
     Menu.setApplicationMenu(null);
     createWindow();
     if (process.env.PEANUT_CI_TEST === '1') {
