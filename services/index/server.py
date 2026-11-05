@@ -233,6 +233,7 @@ def build_fts_query(query: str) -> str:
         phrase, plain = match.group(1), match.group(2)
         if phrase is not None:
             tokens = re.findall(r"[\w]{2,}", phrase.casefold(), flags=re.UNICODE)
+            tokens = tokens[:max(0, 12 - token_count)]
             if tokens:
                 token_count += len(tokens)
                 parts.append('"' + " ".join(tokens) + '"')
