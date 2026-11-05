@@ -102,13 +102,27 @@ async function saveImportedPage(importRoot, input) {
     if (typeof html !== 'string' || html.length > MAX_HTML_CHARS) throw new Error('The page HTML exceeds the editor limit.');
     if (typeof textContent !== 'string' || textContent.length > MAX_TEXT_CHARS) throw new Error('The page text exceeds the editor limit.');
 
+    const sourceTitle = page.sourceTitle ?? page.title;
+    const sourceDescription = page.sourceDescription ?? page.description;
+    const sourceHtml = page.sourceHtml ?? page.html;
+    const sourceTextContent = page.sourceTextContent ?? page.textContent;
+    const sourceHash = page.sourceHash || fingerprint([
+        sourceTitle, sourceDescription, sourceHtml, sourceTextContent
+    ].join('\n'));
+    const editedHash = fingerprint([title, description, html, textContent].join('\n'));
     const updated = {
         ...page,
         title,
         description,
         html,
         textContent,
-        sourceHash: fingerprint(html + '\n' + textContent),
+        sourceTitle,
+        sourceDescription,
+        sourceHtml,
+        sourceTextContent,
+        sourceHash,
+        editedHash,
+        sourceUpdatedSinceEdit: false,
         editedAt: new Date().toISOString()
     };
     await atomicWrite(pagePath, updated);
