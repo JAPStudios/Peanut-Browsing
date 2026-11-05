@@ -8,7 +8,8 @@ from urllib.error import HTTPError
 from urllib.request import Request, urlopen
 
 import server as index_server
-from server import (IndexStore, discover_sitemap_urls, parse_html, parse_sitemap_document,\n                    tokenize_query, validate_public_url)
+from server import (IndexStore, discover_sitemap_urls, parse_html, parse_sitemap_document,
+                    tokenize_query, validate_public_url)
 
 
 class SearchIndexTests(unittest.TestCase):
