@@ -277,18 +277,10 @@ insertBlockButton.addEventListener('click', async () => {
         const block = await api.createContentBlock({
             type: blockTypeInput.value,
             text: blockTextInput.value,
-            url: blockUrlInput.value
+            url: blockUrlInput.value,
+            source: htmlInput.value
         });
-        const source = htmlInput.value;
-        const closingMain = /<\/main\s*>/i;
-        const closingBody = /<\/body\s*>/i;
-        if (closingMain.test(source)) {
-            htmlInput.value = source.replace(closingMain, block + '\n</main>');
-        } else if (closingBody.test(source)) {
-            htmlInput.value = source.replace(closingBody, block + '\n</body>');
-        } else {
-            htmlInput.value = source + '\n' + block + '\n';
-        }
+        htmlInput.value = block;
         blockTextInput.value = '';
         updatePreview();
         statusElement.textContent = 'Content block inserted. Save corrections to keep it.';
