@@ -49,6 +49,19 @@ function normalizeHttpUrl(value, requiredOrigin, requiredPathPrefix = '/') {
     return url;
 }
 
+function normalizeAssetUrl(value, requiredOrigin) {
+    const url = normalizeHttpUrl(value);
+    if (!url) return null;
+    if (url.origin === requiredOrigin) return url;
+    const trustedCdn = [
+        '.wixstatic.com',
+        '.parastorage.com',
+        '.wixmp.com',
+        '.filesusr.com'
+    ].some(suffix => url.hostname.endsWith(suffix));
+    return trustedCdn ? url : null;
+}
+
 function decodeXml(value) {
     const decodePoint = number => {
         const point = Number(number);
@@ -74,4 +87,4 @@ function extractSitemapLocations(xml, limit = 2000) {
     return locations;
 }
 
-module.exports = { normalizeHttpUrl, decodeXml, extractSitemapLocations, isPublicAddress, assertPublicHostname };
+module.exports = { normalizeHttpUrl, normalizeAssetUrl, decodeXml, extractSitemapLocations, isPublicAddress, assertPublicHostname };
