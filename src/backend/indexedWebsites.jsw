@@ -1,0 +1,77 @@
+import { fetch } from 'wix-fetch';
+import { secrets } from 'wix-secrets-backend.v2';
+import { elevate } from 'wix-auth';
+import { validateSearchEndpoint } from 'backend/searchUtils';
+
+const elevatedGetSecretValue = elevate(secrets.getSecretValue);
+
+async function readRequiredSecret(name) {
+    try {
+        const value = await elevatedGetSecretValue(name);
+        if (typeof value === 'string' && value.trim()) return value.trim();
+        if (value && typeof value.value === 'string' && value.value.trim()) return value.value.trim();
+    } catch (error) {
+        throw new Error('Peanut Browsing indexing is not connected to its search service yet.');
+    }
+    throw new Error('Peanut Browsing indexing is not connected to its search service yet.');
+}
+
+function validateSeedWebsite(value) {
+    if (typeof value !== 'string' || value.length > 2048) {
+        throw new Error('Enter a valid public website address.');
+    }
+    let url;
+    try {
+        url = new URL(value.trim());
+    } catch (error) {
+        throw new Error('Enter a valid public website address.');
+    }
+    const hostname = url.hostname.toLowerCase();
+    if (!['http:', 'https:'].includes(url.protocol) || !hostname ||
+        url.username || url.password || hostname === 'localhost' ||
+        hostname.endsWith('.localhost') || hostname.endsWith('.local') ||
+        hostname.endsWith('.internal') || hostname.endsWith('.test') ||
+        hostname.endsWith('.invalid') || hostname.includes(':')) {
+        throw new Error('Only public HTTP or HTTPS websites can be added to the Peanut Index.');
+    }
+    url.hash = '';
+    return url.href;
+}
+
+/** Adds a bounded, robots.txt-compliant crawl of a public website to the first-party index. */
+export async function indexWebsite(websiteUrl, maxPages = 10) {
+    const seed = validateSeedWebsite(websiteUrl);
+    const pageLimit = Number(maxPages);
+    if (!Number.isInteger(pageLimit) || pageLimit < 1 || pageLimit > 25) {
+        throw new Error('A website indexing request must contain between 1 and 25 pages.');
+    }
+
+    const endpointValue = await readRequiredSecret('PEANUT_SEARCH_API_URL');
+    const apiKey = await readRequiredSecret('PEANUT_SEARCH_API_KEY');
+    const endpoint = validateSearchEndpoint(endpointValue);
+    const requestUrl = new URL('/index/crawl', endpoint.origin);
+
+    let response;
+    try {
+        response = await fetch(requestUrl.href, {
+            method: 'post',
+            headers: {
+                Accept: 'application/json',
+                'Content-Type': 'application/json',
+                'X-API-Key': apiKey
+            },
+            body: JSON.stringify({ url: seed, maxPages: pageLimit })
+        });
+    } catch (error) {
+        throw new Error('Peanut Browsing could not reach its indexing service. Try again shortly.');
+    }
+
+    if (!response.ok) {
+        throw new Error('The Peanut Browsing indexing service returned HTTP ' + response.status + '.');
+    }
+    try {
+        return await response.json();
+    } catch (error) {
+        throw new Error('The Peanut Browsing indexing service returned unreadable data.');
+    }
+}
