@@ -75,6 +75,7 @@ class FirstPartySearchTests(unittest.TestCase):
         expression = build_fts_query('peanut "browser search" OR index')
         self.assertEqual(expression, '"peanut" AND "browser search" OR "index"')
         self.assertEqual(build_fts_query("peanut OR browser"), '"peanut" OR "browser"')
+        self.assertEqual(build_fts_query("peanut AND browser"), '"peanut" AND "browser"')
         self.assertEqual(build_fts_query('"peanut OR browser"'), '"peanut or browser"')
 
     def test_rejects_queries_without_searchable_terms(self):
