@@ -10,7 +10,7 @@ from urllib.request import Request, urlopen
 
 import server as index_server
 from server import (IndexStore, discover_sitemap_urls, parse_html, parse_sitemap_document,
-                    read_robots, tokenize_query, validate_public_url)
+                    read_robots, validate_public_url, build_fts_query)
 
 
 class SearchIndexTests(unittest.TestCase):
