@@ -268,8 +268,9 @@ async function crawlSite(startAddress, onProgress = () => {}) {
         }
     });
 
-    const contents = browser.webContents;
-    contents.setWindowOpenHandler(() => ({ action: 'deny' }));
+    try {
+        const contents = browser.webContents;
+        contents.setWindowOpenHandler(() => ({ action: 'deny' }));
     const allowSameOrigin = (_event, details) => {
         const target = typeof details === 'string' ? details : details?.url;
         const normalized = normalizeHttpUrl(target, origin);
@@ -298,7 +299,6 @@ async function crawlSite(startAddress, onProgress = () => {}) {
         }
     }
 
-    try {
         while (queue.length > 0 && visited.size < MAX_PAGES) {
             const address = queue.shift();
             if (visited.has(address)) continue;
