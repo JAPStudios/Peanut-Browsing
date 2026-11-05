@@ -14,6 +14,9 @@ const pageUrl = document.getElementById('page-url');
 const previewFrame = document.getElementById('page-preview');
 const assetCountElement = document.getElementById('asset-count');
 const saveButton = document.getElementById('save-page');
+const batchSitesInput = document.getElementById('batch-sites');
+const batchImportButton = document.getElementById('batch-import');
+const batchStatus = document.getElementById('batch-status');
 
 let sites = [];
 let profile = { bookmarks: [], history: [] };
@@ -209,6 +212,32 @@ editor.addEventListener('submit', async event => {
 });
 
 htmlInput.addEventListener('input', updatePreview);
+batchImportButton.addEventListener('click', async () => {
+    const addresses = Array.from(new Set(batchSitesInput.value.split(/\\r?\\n/).map(value => value.trim()).filter(Boolean)));
+    if (addresses.length === 0 || addresses.length > 10) {
+        batchStatus.textContent = 'Enter between 1 and 10 website addresses, one per line.';
+        return;
+    }
+    batchImportButton.disabled = true;
+    batchStatus.textContent = 'Starting website imports…';
+    try {
+        const results = await api.importSites(addresses);
+        const imported = results.filter(result => result.status !== 'failed');
+        const failed = results.length - imported.length;
+        await loadSites();
+        batchStatus.textContent = 'Imported ' + imported.length + ' website(s); ' + failed + ' failed.';
+    } catch (error) {
+        batchStatus.textContent = error.message || 'Batch import failed.';
+    } finally {
+        batchImportButton.disabled = false;
+    }
+});
+api.onImportProgress(progress => {
+    const sitePrefix = progress.websiteTotal
+        ? 'Website ' + progress.websiteIndex + ' of ' + progress.websiteTotal + ': '
+        : '';
+    batchStatus.textContent = sitePrefix + 'captured ' + progress.completed + ' page(s).';
+});
 document.getElementById('clear-history').addEventListener('click', async () => {
     profile = await api.clearHistory();
     renderProfile();
