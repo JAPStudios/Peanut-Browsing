@@ -70,6 +70,23 @@
         <input id="title" maxlength="512" type="text">
         <label for="description">Meta description</label>
         <textarea id="description" rows="2" maxlength="4000"></textarea>
+        <section class="content-builder" aria-labelledby="content-builder-heading">
+          <h3 id="content-builder-heading">Add a content block</h3>
+          <label for="block-type">Block type</label>
+          <select id="block-type">
+            <option value="heading">Heading</option>
+            <option value="subheading">Subheading</option>
+            <option value="paragraph">Paragraph</option>
+            <option value="quote">Quote</option>
+            <option value="list">Bullet list</option>
+            <option value="link">Link</option>
+          </select>
+          <label for="block-text">Text or one list item per line</label>
+          <textarea id="block-text" rows="3" maxlength="12000"></textarea>
+          <label for="block-url" id="block-url-label" hidden>Link address</label>
+          <input id="block-url" type="url" placeholder="https://example.com" hidden>
+          <button id="insert-block" type="button">Insert block into page</button>
+        </section>
         <label for="html-source">HTML source with isolated preview</label>
         <div class="source-preview">
           <textarea id="html-source" class="source-editor" spellcheck="false"></textarea>
