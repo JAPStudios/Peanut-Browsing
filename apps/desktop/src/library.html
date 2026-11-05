@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:;">
+  <title>Peanut Browsing — Imported Sites</title>
+  <link rel="stylesheet" href="library.css">
+</head>
+<body>
+  <header class="library-header">
+    <div>
+      <h1>Imported websites</h1>
+      <p>Review captured pages, then correct their source markup or extracted text.</p>
+    </div>
+    <button id="refresh" type="button">Refresh library</button>
+  </header>
+  <main class="workspace">
+    <section class="column sites-column">
+      <h2>Websites</h2>
+      <div id="sites" class="item-list" aria-label="Imported websites"></div>
+    </section>
+    <section class="column pages-column">
+      <h2>Pages</h2>
+      <div id="pages" class="item-list" aria-label="Imported pages"></div>
+    </section>
+    <section class="editor-column">
+      <div id="empty-state" class="empty-state">
+        <h2>Select an imported page</h2>
+        <p>Import a website from the browser, then select a page to review its captured source.</p>
+      </div>
+      <form id="page-editor" hidden>
+        <div class="editor-heading">
+          <div>
+            <p id="page-url" class="page-url"></p>
+            <h2>Edit imported page</h2>
+          </div>
+          <button id="save-page" type="submit">Save corrections</button>
+        </div>
+        <label for="title">Page title</label>
+        <input id="title" maxlength="512" type="text">
+        <label for="description">Meta description</label>
+        <textarea id="description" rows="2" maxlength="4000"></textarea>
+        <label for="html-source">HTML source</label>
+        <textarea id="html-source" class="source-editor" spellcheck="false"></textarea>
+        <label for="text-content">Extracted page text</label>
+        <textarea id="text-content" class="text-editor" spellcheck="true"></textarea>
+        <p class="editor-note">Source markup is stored as text. It is not executed or rendered by this editor.</p>
+      </form>
+    </section>
+  </main>
+  <footer id="status" role="status">Loading imported websites…</footer>
+  <script src="library.js"></script>
+</body>
+</html>
