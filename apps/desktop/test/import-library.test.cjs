@@ -173,6 +173,14 @@ test('creates an independent website, adds pages, then exports the authored site
     const about = await createWebsitePage(root, { siteId: created.id, path: 'about/team' });
     assert.equal(about.url, 'peanut-site://' + created.id + '/about/team/');
     assert.equal(about.title, 'Team');
+    await saveImportedPage(root, {
+        siteId: created.id,
+        pageId: created.pageId,
+        title: 'My Independent Website',
+        description: '',
+        html: '<!doctype html><html><body><a href="/about/team/">Team</a></body></html>',
+        textContent: 'Team'
+    });
     assert.equal(about.pageCount, 2);
     await assert.rejects(
         createWebsitePage(root, { siteId: created.id, path: '../outside' }),
@@ -187,8 +195,11 @@ test('creates an independent website, adds pages, then exports the authored site
     t.after(() => fs.rm(destination, { recursive: true, force: true }));
     const exported = await exportImportedSite(root, created.id, destination);
     assert.equal(exported.pageCount, 2);
-    assert.ok((await fs.stat(path.join(exported.directory, 'index.html'))).isFile());
+    const homePath = path.join(exported.directory, 'index.html');
+    assert.ok((await fs.stat(homePath)).isFile());
     assert.ok((await fs.stat(path.join(exported.directory, 'about', 'team', 'index.html'))).isFile());
+    const homeHtml = await fs.readFile(homePath, 'utf8');
+    assert.match(homeHtml, /href="\.\/about\/team\/index\.html"/);
 });
 
 test('preserves every page when several pages are created at once', async t => {
