@@ -102,7 +102,9 @@ importButton.addEventListener('click', async () => {
     }
 });
 api.onImportProgress(progress => {
-    if (progress.status === 'importing') {
+    if (progress.status === 'discovering-sitemaps') {
+        statusElement.textContent = 'Checking robots.txt and sitemap indexes…';
+    } else if (progress.status === 'importing') {
         statusElement.textContent = 'Importing page ' + progress.completed + ' of up to ' + progress.limit;
     }
 });
