@@ -193,7 +193,7 @@ function escapeHtmlAttribute(value) {
 }
 
 function rewritePageLinks(html, sourceUrl, currentPath, pagePaths) {
-    return html.replace(/(<a\b[^>]*?\bhref\s*=\s*)(["'])(.*?)\2/gi,
+    return html.replace(/(<a\b[^>]*?\shref\s*=\s*)(["'])(.*?)\2/gi,
         (whole, prefix, quote, rawHref) => {
             try {
                 const target = new URL(rawHref.replace(/&amp;/gi, '&'), sourceUrl);
