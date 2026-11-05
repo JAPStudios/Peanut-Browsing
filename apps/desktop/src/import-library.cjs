@@ -274,9 +274,9 @@ async function exportImportedSite(importRoot, siteId, destinationDirectory) {
     const manifest = await readJson(path.join(siteDirectory, 'manifest.json'));
     const sourcePages = Array.isArray(manifest.pages) ? manifest.pages : [];
     if (sourcePages.length === 0) throw new Error('This imported website has no pages to export.');
-    let siteOrigin;
+    let siteAddress;
     try {
-        siteOrigin = new URL(manifest.websiteUrl).origin;
+        siteAddress = new URL(manifest.websiteUrl);
     } catch {
         throw new Error('The imported website manifest has an invalid source address.');
     }
@@ -288,7 +288,7 @@ async function exportImportedSite(importRoot, siteId, destinationDirectory) {
         if (!entry || typeof entry.id !== 'string' || !PAGE_ID_PATTERN.test(entry.id)) continue;
         const page = await readJson(path.join(siteDirectory, entry.id + '.json'));
         const source = new URL(page.url);
-        if (source.origin !== siteOrigin) continue;
+        if (source.protocol !== siteAddress.protocol || source.host !== siteAddress.host) continue;
         const outputPath = pageExportPath(page.url, usedPaths);
         pages.push({ entry, page, outputPath });
         source.hash = '';
@@ -455,8 +455,9 @@ async function createWebsitePage(importRoot, input) {
     return withFileLock(manifestPath, async () => {
         const manifest = await readJson(manifestPath);
         if (!manifest.authored) throw new Error('New pages can only be added to websites created in Peanut Browsing.');
-        const origin = new URL(manifest.websiteUrl).origin;
-        const url = origin + '/' + segments.map(segment => segment.toLowerCase()).join('/') + '/';
+        const siteAddress = new URL(manifest.websiteUrl);
+        const url = siteAddress.protocol + '//' + siteAddress.host + '/' +
+            segments.map(segment => segment.toLowerCase()).join('/') + '/';
         if ((manifest.pages || []).some(page => page.url === url)) {
             throw new Error('That page path already exists in this website.');
         }
