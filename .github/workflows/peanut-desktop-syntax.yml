@@ -4,6 +4,7 @@ on:
   push:
     paths:
       - "apps/desktop/**"
+      - "services/search/**"
       - ".github/workflows/peanut-desktop-syntax.yml"
   pull_request:
     paths:
@@ -74,11 +75,12 @@ jobs:
       - name: Smoke-test SearXNG JSON search
         run: |
           for attempt in $(seq 1 60); do
-            if curl --fail --silent --max-time 10 http://127.0.0.1:8080/ -o /tmp/peanut-search-home.html; then
+            if curl --fail --silent --show-error --max-time 10 http://127.0.0.1:8080/ -o /tmp/peanut-search-home.html; then
               break
             fi
             sleep 2
           done
+          test -s /tmp/peanut-search-home.html
           grep -q "Peanut Browsing" /tmp/peanut-search-home.html
           curl --fail --silent --show-error --max-time 60 \
             -A "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36" \
