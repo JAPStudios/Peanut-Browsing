@@ -21,7 +21,7 @@ If the configured index service is unreachable, the search request returns an ex
 
 ## Indexing websites
 
-The first-party index crawler accepts explicitly submitted public website addresses. It obeys `robots.txt`, remains on the submitted website's origin, rejects private/local targets, limits a crawl to 25 pages, and stores extracted titles, URLs, and text in SQLite FTS5. Search uses BM25 ranking.
+The index crawler accepts explicitly submitted public seed addresses. It checks each origin's `robots.txt`, follows eligible public links across origins, rejects private/local targets, limits each crawl to 25 pages and stores extracted titles, URLs and text in SQLite FTS5. Sitemap discovery is restricted to the submitted seed's origin. Search uses BM25 ranking.
 
 The crawler does not yet discover the entire public web automatically. Pages appear only after their website has been submitted for indexing. It is therefore an independent first-party search engine foundation, not yet a comprehensive web-scale search index.
 
