@@ -10,6 +10,7 @@ test('normalizes search phrases and validates page numbers', () => {
     }
     assert.throws(() => validateSearchRequest('   ', 1), /between 1 and 200 characters/);
     assert.throws(() => validateSearchRequest('x + -', 1), /at least one search term/);
+    assert.throws(() => validateSearchRequest('__', 1), /at least one search term/);
     assert.throws(() => validateSearchRequest('peanut', 0), /outside the supported range/);
     assert.throws(() => validateSearchRequest('peanut', 21), /outside the supported range/);
 });
