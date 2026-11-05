@@ -12,5 +12,9 @@ contextBridge.exposeInMainWorld('peanutBrowser', {
     onState: callback => {
         if (typeof callback !== 'function') return;
         ipcRenderer.on('peanut:state', (_event, state) => callback(state));
+    },
+    onFocusAddress: callback => {
+        if (typeof callback !== 'function') return;
+        ipcRenderer.on('peanut:focus-address', () => callback());
     }
 });
