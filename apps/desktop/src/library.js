@@ -22,6 +22,7 @@ const exportButton = document.getElementById('export-site');
 const batchStatus = document.getElementById('batch-status');
 const newSiteNameInput = document.getElementById('new-site-name');
 const createSiteButton = document.getElementById('create-site');
+const openSiteButton = document.getElementById('open-site');
 const newPagePathInput = document.getElementById('new-page-path');
 const createPageButton = document.getElementById('create-page');
 const blockTypeInput = document.getElementById('block-type');
@@ -137,6 +138,7 @@ function renderSites() {
         () => selectSite(site.id)
     )));
     exportButton.disabled = !sites.some(site => site.id === selectedSiteId);
+    openSiteButton.disabled = !sites.some(site => site.id === selectedSiteId && site.authored);
     createPageButton.disabled = !sites.some(site => site.id === selectedSiteId && site.authored);
 }
 
@@ -308,6 +310,17 @@ createSiteButton.addEventListener('click', async () => {
         batchStatus.textContent = error.message || 'Website creation failed.';
     } finally {
         createSiteButton.disabled = false;
+    }
+});
+
+openSiteButton.addEventListener('click', async () => {
+    const site = sites.find(item => item.id === selectedSiteId && item.authored);
+    if (!site) return;
+    try {
+        await api.openSavedUrl(site.websiteUrl);
+        statusElement.textContent = 'Opened ' + site.websiteUrl;
+    } catch (error) {
+        statusElement.textContent = error.message || 'The website could not be opened.';
     }
 });
 
