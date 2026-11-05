@@ -71,6 +71,7 @@ jobs:
         run: docker compose -f services/search/docker-compose.yml config --quiet
 
       - name: Start SearXNG search service
+        id: start-search
         run: docker compose -f services/search/docker-compose.yml up -d
       - name: Smoke-test SearXNG JSON search
         run: |
@@ -88,7 +89,7 @@ jobs:
             "http://127.0.0.1:8080/search?q=peanut&format=json" -o /tmp/peanut-search.json
           node -e "const data = require('/tmp/peanut-search.json'); if (!Array.isArray(data.results)) process.exit(1);"
       - name: Diagnose search service if smoke test fails
-        if: failure()
+        if: failure() && steps.start-search.outcome != 'skipped'
         run: |
           docker compose -f services/search/docker-compose.yml ps -a
           docker compose -f services/search/docker-compose.yml logs --no-color --tail=200 core valkey
