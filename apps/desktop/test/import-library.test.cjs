@@ -189,6 +189,32 @@ test('creates an independent website, adds pages, then exports the authored site
     assert.ok((await fs.stat(path.join(exported.directory, 'about', 'team', 'index.html'))).isFile());
 });
 
+test('keeps overlapping page saves from sharing a temporary file', async t => {
+    const { root, siteId, pageId } = await fixture(t);
+    const save = (title, text) => saveImportedPage(root, {
+        siteId,
+        pageId,
+        title,
+        description: '',
+        html: '<html><body>' + text + '</body></html>',
+        textContent: text
+    });
+
+    const results = await Promise.all([
+        save('First correction', 'First correction'),
+        save('Second correction', 'Second correction')
+    ]);
+    assert.equal(results.length, 2);
+
+    const page = await readImportedPage(root, siteId, pageId);
+    assert.ok(['First correction', 'Second correction'].includes(page.title));
+    assert.equal(page.textContent, page.title);
+    assert.ok(page.html.includes('<body>' + page.title + '</body>'));
+
+    const files = await fs.readdir(path.join(root, siteId));
+    assert.equal(files.some(file => file.endsWith('.tmp')), false);
+});
+
 test('rejects path traversal identifiers', async t => {
     const { root, pageId } = await fixture(t);
     await assert.rejects(
