@@ -49,7 +49,9 @@ function render(state) {
 
 document.getElementById('address-form').addEventListener('submit', event => {
     event.preventDefault();
-    api.navigate(addressElement.value);
+    api.navigate(addressElement.value).catch(error => {
+        statusElement.textContent = error.message || 'Navigation could not be started.';
+    });
     addressElement.blur();
 });
 document.getElementById('new-tab').addEventListener('click', () => api.newTab());
@@ -60,4 +62,8 @@ reloadButton.addEventListener('click', () => {
     else api.reload();
 });
 addressElement.addEventListener('focus', () => addressElement.select());
+api.onFocusAddress(() => {
+    addressElement.focus();
+    addressElement.select();
+});
 api.onState(render);
