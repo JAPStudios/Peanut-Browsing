@@ -1,6 +1,8 @@
 const api = window.peanutBrowser;
 const sitesElement = document.getElementById('sites');
 const pagesElement = document.getElementById('pages');
+const bookmarksElement = document.getElementById('bookmarks');
+const historyElement = document.getElementById('history');
 const statusElement = document.getElementById('status');
 const emptyState = document.getElementById('empty-state');
 const editor = document.getElementById('page-editor');
@@ -13,6 +15,7 @@ const previewFrame = document.getElementById('page-preview');
 const saveButton = document.getElementById('save-page');
 
 let sites = [];
+let profile = { bookmarks: [], history: [] };
 let selectedSiteId = null;
 let selectedPageId = null;
 let activePageUrl = '';
@@ -62,6 +65,40 @@ function makeItem(title, subtitle, selected, action) {
     return button;
 }
 
+function makeSavedRow(title, subtitle, openAction, removeAction = null) {
+    const row = document.createElement('div');
+    row.className = 'saved-row';
+    const openButton = makeItem(title, subtitle, false, openAction);
+    row.append(openButton);
+    if (removeAction) {
+        const removeButton = document.createElement('button');
+        removeButton.type = 'button';
+        removeButton.className = 'remove-saved';
+        removeButton.textContent = 'Remove';
+        removeButton.addEventListener('click', removeAction);
+        row.append(removeButton);
+    }
+    return row;
+}
+
+function renderProfile() {
+    bookmarksElement.replaceChildren(...profile.bookmarks.map(item => makeSavedRow(
+        item.title || 'Saved page',
+        item.url,
+        () => api.openSavedUrl(item.url),
+        async () => {
+            profile = await api.removeBookmark(item.url);
+            renderProfile();
+            statusElement.textContent = 'Bookmark removed.';
+        }
+    )));
+    historyElement.replaceChildren(...profile.history.map(item => makeSavedRow(
+        item.title || 'Visited page',
+        item.url,
+        () => api.openSavedUrl(item.url)
+    )));
+}
+
 function renderSites() {
     sitesElement.replaceChildren(...sites.map(site => makeItem(
         site.websiteUrl || 'Imported website',
@@ -86,6 +123,8 @@ async function loadSites() {
     statusElement.textContent = 'Loading imported websites…';
     try {
         sites = await api.listImports();
+        profile = await api.listProfile();
+        renderProfile();
         if (!sites.some(site => site.id === selectedSiteId)) {
             selectedSiteId = sites[0]?.id || null;
             selectedPageId = null;
@@ -168,5 +207,10 @@ editor.addEventListener('submit', async event => {
 });
 
 htmlInput.addEventListener('input', updatePreview);
+document.getElementById('clear-history').addEventListener('click', async () => {
+    profile = await api.clearHistory();
+    renderProfile();
+    statusElement.textContent = 'Browsing history cleared.';
+});
 document.getElementById('refresh').addEventListener('click', loadSites);
 loadSites();
