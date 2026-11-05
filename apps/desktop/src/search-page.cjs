@@ -3,7 +3,7 @@
 const MAX_RESULTS = 20;
 
 function normalizeSearchPayload(query, payload) {
-    const normalizedQuery = String(query || '').trim().replace(/\\s+/g, ' ');
+    const normalizedQuery = String(query || '').trim().replace(/\s+/g, ' ');
     if (!normalizedQuery || normalizedQuery.length > 200) {
         throw new Error('Search phrases must contain between 1 and 200 characters.');
     }
