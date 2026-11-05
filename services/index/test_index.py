@@ -77,6 +77,18 @@ class SearchIndexTests(unittest.TestCase):
             self.assertEqual(result["results"][0]["url"], "https://example.org/peanut")
             self.assertEqual(result["results"][0]["engine"], "Peanut Index")
 
+    def test_search_returns_pages_matching_any_query_term(self):
+        with tempfile.TemporaryDirectory() as directory:
+            store = IndexStore(os.path.join(directory, "index.sqlite"))
+            store.upsert("https://example.org/peanut", "Peanut project", "A nut-related page.")
+            store.upsert("https://example.org/browsing", "Browsing project", "A browser-related page.")
+            result = store.search("peanut browsing", limit=10)
+            self.assertEqual(result["totalResults"], 2)
+            self.assertEqual(
+                {item["url"] for item in result["results"]},
+                {"https://example.org/peanut", "https://example.org/browsing"},
+            )
+
     def test_http_search_endpoint_requires_key_and_returns_results(self):
         with tempfile.TemporaryDirectory() as directory:
             store = IndexStore(os.path.join(directory, "api.sqlite"))
