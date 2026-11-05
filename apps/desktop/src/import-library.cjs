@@ -48,6 +48,8 @@ async function listImportedSites(importRoot) {
             sites.push({
                 id: entry.name,
                 websiteUrl: manifest.websiteUrl || '',
+                name: manifest.name || '',
+                authored: Boolean(manifest.authored),
                 startUrl: manifest.startUrl || '',
                 importedAt: manifest.importedAt || '',
                 pageCount: manifest.pageCount || 0,
