@@ -1,0 +1,30 @@
+# Based on the current SearXNG container deployment template.
+# Documentation: https://docs.searxng.org/admin/installation-docker.html
+name: peanut-browsing-search
+
+services:
+  core:
+    container_name: peanut-browsing-search
+    image: docker.io/searxng/searxng:${SEARXNG_VERSION:-latest}
+    restart: unless-stopped
+    ports:
+      - "${SEARXNG_HOST:-127.0.0.1}:${SEARXNG_PORT:-8080}:8080"
+    env_file:
+      - ./.env
+    volumes:
+      - ./core-config/:/etc/searxng/:Z
+      - search-cache:/var/cache/searxng/
+    depends_on:
+      - valkey
+
+  valkey:
+    container_name: peanut-browsing-search-cache
+    image: docker.io/valkey/valkey:9-alpine
+    command: valkey-server --save 300 1 --save 60 1000 --loglevel warning
+    restart: unless-stopped
+    volumes:
+      - valkey-cache:/data/
+
+volumes:
+  search-cache:
+  valkey-cache:
