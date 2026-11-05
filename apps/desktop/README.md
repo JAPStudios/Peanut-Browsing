@@ -9,7 +9,8 @@ Requirements: Node.js 20 or newer, npm, plus Docker Desktop for the local search
 1. Open a terminal in `apps/desktop`.
 2. Run `npm install`.
 3. Start the search service from `services/search` as documented there.
-4. Run `npm start`.
+4. Run `npm test` to execute the desktop unit tests.
+5. Run `npm start`.
 
 To use a different search service, set `PEANUT_SEARCH_URL` to an HTTP or HTTPS URL containing the literal `{query}` placeholder.
 
