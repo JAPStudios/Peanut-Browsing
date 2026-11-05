@@ -12,6 +12,11 @@
     <header class="search-header">
       <span class="brand">Peanut Browsing</span>
       <p class="product-label">Independent search</p>
+      <form id="search-form" class="search-form" role="search">
+        <label class="visually-hidden" for="search-query">Search the web</label>
+        <input id="search-query" name="q" type="search" maxlength="200" autocomplete="off" placeholder="Search the web" required>
+        <button type="submit">Search</button>
+      </form>
       <h1 id="query">Search</h1>
       <p id="summary" class="summary" role="status">Loading results…</p>
     </header>

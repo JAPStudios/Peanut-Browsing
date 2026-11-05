@@ -3,19 +3,34 @@
 const queryElement = document.getElementById('query');
 const summaryElement = document.getElementById('summary');
 const resultsElement = document.getElementById('results');
-const emptyElement = document.getElementById('empty');
 const errorElement = document.getElementById('error');
+const emptyElement = document.getElementById('empty');
 const paginationElement = document.getElementById('pagination');
+const searchForm = document.getElementById('search-form');
+const searchInput = document.getElementById('search-query');
+
+searchForm.addEventListener('submit', event => {
+    event.preventDefault();
+    const query = searchInput.value.trim().replace(/\\s+/g, ' ');
+    if (!query || query.length > 200) {
+        searchInput.setCustomValidity('Enter a search phrase of 1 to 200 characters.');
+        searchInput.reportValidity();
+        return;
+    }
+    searchInput.setCustomValidity('');
+    window.location.href = 'peanut-search://results/?q=' + encodeURIComponent(query) + '&page=1';
+});
 
 function render() {
     try {
         const encoded = window.location.hash.slice(1);
-        if (!encoded) throw new Error('Search results are unavailable. Enter a search phrase in the browser bar.');
+        if (!encoded) throw new Error('Search results are unavailable. Enter a search phrase in the search field.');
         const data = JSON.parse(decodeURIComponent(encoded));
         if (!data || typeof data !== 'object' || !Array.isArray(data.results)) {
             throw new Error('Peanut Browsing returned an invalid results document.');
         }
         queryElement.textContent = data.query || 'Search';
+        searchInput.value = data.query || '';
         summaryElement.textContent = Number.isInteger(data.totalResults)
             ? data.totalResults.toLocaleString() + ' matching pages'
             : data.results.length + ' results';
