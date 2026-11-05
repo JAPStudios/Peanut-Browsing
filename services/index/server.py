@@ -184,7 +184,7 @@ class IndexStore:
         tokens = tokenize_query(query)
         if not tokens:
             raise ValueError("Enter at least one search term containing two or more characters.")
-        safe_query = " AND ".join('"' + token.replace('"', '""') + '"' for token in tokens)
+        safe_query = " OR ".join('"' + token.replace('"', '""') + '"' for token in tokens)
         with self.connect() as connection:
             total = connection.execute(
                 "SELECT COUNT(*) FROM page_index WHERE page_index MATCH ?", (safe_query,)
