@@ -9,11 +9,39 @@ const descriptionInput = document.getElementById('description');
 const htmlInput = document.getElementById('html-source');
 const textInput = document.getElementById('text-content');
 const pageUrl = document.getElementById('page-url');
+const previewFrame = document.getElementById('page-preview');
 const saveButton = document.getElementById('save-page');
 
 let sites = [];
 let selectedSiteId = null;
 let selectedPageId = null;
+let activePageUrl = '';
+
+function updatePreview() {
+    if (!activePageUrl) {
+        previewFrame.srcdoc = '';
+        return;
+    }
+    let baseUrl;
+    try {
+        baseUrl = new URL(activePageUrl).href.replace(/&/g, '&amp;').replace(/"/g, '&quot;');
+    } catch {
+        previewFrame.srcdoc = '';
+        return;
+    }
+
+    let source = htmlInput.value;
+    source = source.replace(/<script\\b[^>]*>[\\s\\S]*?<\\/script\\s*>/gi, '');
+    source = source.replace(/<meta\\b[^>]*http-equiv\\s*=\\s*["']?refresh["']?[^>]*>/gi, '');
+    const policy = '<meta http-equiv="Content-Security-Policy" content="default-src \'none\'; img-src https: data:; style-src https: \'unsafe-inline\'; font-src https: data:; media-src https:; connect-src \'none\'; object-src \'none\'; frame-src \'none\'; form-action \'none\'; base-uri https:">';
+    const base = '<base href="' + baseUrl + '">';
+    if (/<head\\b[^>]*>/i.test(source)) {
+        source = source.replace(/<head\\b[^>]*>/i, match => match + policy + base);
+    } else {
+        source = '<head>' + policy + base + '</head>' + source;
+    }
+    previewFrame.srcdoc = source;
+}
 
 function makeItem(title, subtitle, selected, action) {
     const button = document.createElement('button');
@@ -102,6 +130,8 @@ async function loadPage(pageId) {
         htmlInput.value = page.html || '';
         textInput.value = page.textContent || '';
         pageUrl.textContent = page.url || '';
+        activePageUrl = page.url || '';
+        updatePreview();
         editor.hidden = false;
         emptyState.hidden = true;
         statusElement.textContent = page.editedAt ? 'Previously edited ' + page.editedAt : 'Original imported source';
@@ -128,6 +158,7 @@ editor.addEventListener('submit', async event => {
         const page = site?.pages.find(item => item.id === selectedPageId);
         if (page) page.title = result.title;
         renderPages();
+        updatePreview();
         statusElement.textContent = 'Saved corrections at ' + result.editedAt;
     } catch (error) {
         statusElement.textContent = error.message || 'The corrections could not be saved.';
@@ -136,5 +167,6 @@ editor.addEventListener('submit', async event => {
     }
 });
 
+htmlInput.addEventListener('input', updatePreview);
 document.getElementById('refresh').addEventListener('click', loadSites);
 loadSites();
