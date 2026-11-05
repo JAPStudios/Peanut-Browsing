@@ -6,6 +6,7 @@ const {
     normalizeAssetUrl,
     decodeXml,
     extractSitemapLocations,
+    parseSitemapDeclarations,
     isPublicAddress,
     assertPublicHostname
 } = require('../src/sitemap-utils.cjs');
@@ -23,6 +24,35 @@ test('rejects unsafe schemes, credentials, private hosts and cross-origin URLs',
     assert.equal(normalizeHttpUrl('http://192.168.1.5/'), null);
     assert.equal(normalizeHttpUrl('http://localhost/'), null);
     assert.equal(normalizeHttpUrl('https://other.test/', 'https://example.test'), null);
+});
+
+
+test('parses case-insensitive sitemap declarations from robots.txt', () => {
+    const robots = [
+        'User-agent: *',
+        'Disallow: /private/',
+        'Sitemap: https://example.test/sitemap.xml',
+        'sitemap: https://example.test/news.xml',
+        'Crawl-delay: 5'
+    ].join('\n');
+    assert.deepEqual(parseSitemapDeclarations(robots), [
+        'https://example.test/sitemap.xml',
+        'https://example.test/news.xml'
+    ]);
+});
+
+test('limits robots.txt sitemap declarations and ignores malformed lines', () => {
+    const robots = [
+        'Sitemap:',
+        'Sitemap: https://example.test/one.xml',
+        'Not-Sitemap: https://example.test/no.xml',
+        'Sitemap: https://example.test/two.xml',
+        'Sitemap: https://example.test/three.xml'
+    ].join('\n');
+    assert.deepEqual(parseSitemapDeclarations(robots, 2), [
+        'https://example.test/one.xml',
+        'https://example.test/two.xml'
+    ]);
 });
 
 test('decodes XML entities and safely ignores invalid numeric code points', () => {
