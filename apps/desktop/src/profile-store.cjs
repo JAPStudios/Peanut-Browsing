@@ -10,7 +10,7 @@ function normalizeUrl(value) {
     try {
         const url = new URL(value);
         const isWeb = url.protocol === 'http:' || url.protocol === 'https:';
-        const isAuthoredSite = url.protocol === 'peanut-site:' && /^[a-f0-9]{20}$/.test(url.hostname) && !url.search;
+        const isAuthoredSite = url.protocol === 'peanut-site:' && /^[a-f0-9]{20}$/.test(url.hostname) && url.search.length <= 2048;
         if ((!isWeb && !isAuthoredSite) || url.username || url.password) return null;
         url.hash = '';
         return url.href;
