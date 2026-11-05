@@ -80,9 +80,7 @@ export function normalizeSearchResults(results) {
     for (const result of results.slice(0, RESULTS_PER_PAGE * 2)) {
         if (!result || typeof result !== 'object' || typeof result.url !== 'string') continue;
         let url;
-        try { url = new URL(result.url); } catch (error) { continue; }
-        if (!['http:', 'https:'].includes(url.protocol) || url.username || url.password) continue;
-        url.hash = '';
+        try { url = new URL(validatePublicWebsiteUrl(result.url)); } catch (error) { continue; }
         if (seen.has(url.href)) continue;
         seen.add(url.href);
         const title = typeof result.title === 'string' ? result.title.trim().slice(0, 500) : '';
