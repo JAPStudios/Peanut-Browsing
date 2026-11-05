@@ -1,0 +1,31 @@
+{
+  "name": "peanut-browsing-desktop",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Peanut Browsing desktop browser shell",
+  "main": "src/main.cjs",
+  "scripts": {
+    "start": "electron .",
+    "package:mac": "electron-builder --mac dmg zip",
+    "package:win": "electron-builder --win nsis",
+    "package:linux": "electron-builder --linux AppImage"
+  },
+  "devDependencies": {
+    "electron": "^36.0.0",
+    "electron-builder": "^26.0.12"
+  },
+  "build": {
+    "appId": "com.japstudios.peanutbrowsing",
+    "productName": "Peanut Browsing",
+    "directories": {
+      "output": "release"
+    },
+    "files": ["src/**/*", "package.json"],
+    "mac": {
+      "target": ["dmg", "zip"],
+      "category": "public.app-category.productivity"
+    },
+    "win": { "target": ["nsis"] },
+    "linux": { "target": ["AppImage"] }
+  }
+}
