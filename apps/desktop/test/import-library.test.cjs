@@ -143,7 +143,7 @@ test('exports corrected pages with local assets and relative internal links', as
     assert.equal(result.assetCount, 3);
 
     const homeHtml = await fs.readFile(path.join(result.directory, 'index.html'), 'utf8');
-    assert.match(homeHtml, /href="about\/index\.html"/);
+    assert.match(homeHtml, /href="\.\/about\/index\.html"/);
     assert.ok(homeHtml.includes('assets/' + logoName));
     assert.ok(homeHtml.includes('assets/' + cssName));
 
