@@ -14,7 +14,7 @@ The service binds to loopback by default. It is not exposed to the local network
 
 ## Configuration
 
-The search configuration inherits SearXNG defaults. It enables HTML results for browser navigation plus JSON results for later native result rendering. Valkey is used for the SearXNG limiter.
+The search configuration inherits SearXNG defaults. It enables HTML results for browser navigation plus JSON results for native result rendering. The service binds to loopback for a single-user desktop deployment, so the SearXNG limiter is disabled: its IP-based bot detection requires correctly configured X-Forwarded-For or X-Real-IP headers from a trusted reverse proxy. Do not expose this instance publicly with the limiter disabled. Valkey remains available in Compose for a future reverse-proxy deployment with the limiter configured.
 
 The desktop application can be pointed at another SearXNG endpoint by setting `PEANUT_SEARCH_URL` to a URL containing the literal `{query}` placeholder.
 
