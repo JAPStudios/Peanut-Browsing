@@ -18,6 +18,7 @@ const restoreSourceButton = document.getElementById('restore-source');
 const saveButton = document.getElementById('save-page');
 const batchSitesInput = document.getElementById('batch-sites');
 const batchImportButton = document.getElementById('batch-import');
+const exportButton = document.getElementById('export-site');
 const batchStatus = document.getElementById('batch-status');
 
 let sites = [];
@@ -126,6 +127,7 @@ function renderSites() {
         site.id === selectedSiteId,
         () => selectSite(site.id)
     )));
+    exportButton.disabled = !sites.some(site => site.id === selectedSiteId);
 }
 
 function renderPages() {
@@ -239,6 +241,25 @@ editor.addEventListener('submit', async event => {
 });
 
 htmlInput.addEventListener('input', updatePreview);
+exportButton.addEventListener('click', async () => {
+    if (!selectedSiteId) return;
+    exportButton.disabled = true;
+    batchStatus.textContent = 'Preparing a static website export…';
+    try {
+        const result = await api.exportSite(selectedSiteId);
+        if (result.status === 'cancelled') {
+            batchStatus.textContent = 'Website export cancelled.';
+        } else {
+            batchStatus.textContent = 'Exported ' + result.pageCount + ' pages plus ' +
+                result.assetCount + ' assets to ' + result.directory +
+                (result.unresolvedAssetCount ? '. Some page assets were not available locally.' : '.');
+        }
+    } catch (error) {
+        batchStatus.textContent = error.message || 'Website export failed.';
+    } finally {
+        exportButton.disabled = !sites.some(site => site.id === selectedSiteId);
+    }
+});
 batchImportButton.addEventListener('click', async () => {
     const addresses = Array.from(new Set(batchSitesInput.value.split(/\r?\n/).map(value => value.trim()).filter(Boolean)));
     if (addresses.length === 0 || addresses.length > 10) {
