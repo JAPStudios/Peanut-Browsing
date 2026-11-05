@@ -278,7 +278,7 @@ async function crawlSite(startAddress, onProgress = () => {}) {
         contents.setWindowOpenHandler(() => ({ action: 'deny' }));
     const allowSameOrigin = (_event, details) => {
         const target = typeof details === 'string' ? details : details?.url;
-        const normalized = normalizeHttpUrl(target, origin);
+        const normalized = normalizeHttpUrl(target, origin, pathPrefix);
         if (!normalized) _event.preventDefault();
     };
     contents.on('will-navigate', allowSameOrigin);
