@@ -11,7 +11,7 @@ const searchInput = document.getElementById('search-query');
 
 searchForm.addEventListener('submit', event => {
     event.preventDefault();
-    const query = searchInput.value.trim().replace(/\\s+/g, ' ');
+    const query = searchInput.value.trim().replace(/\s+/g, ' ');
     if (!query || query.length > 200) {
         searchInput.setCustomValidity('Enter a search phrase of 1 to 200 characters.');
         searchInput.reportValidity();
