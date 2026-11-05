@@ -39,6 +39,9 @@ jobs:
       - name: Resolve desktop dependencies
         working-directory: apps/desktop
         run: npm install --package-lock=false --no-audit --no-fund
+      - name: Verify ad and tracker filter exports
+        working-directory: apps/desktop
+        run: node -e "const m = require('@ghostery/adblocker-electron'); if (typeof m.ElectronBlocker.fromLists !== 'function' || !Array.isArray(m.adsAndTrackingLists) || m.adsAndTrackingLists.length === 0) process.exit(1)"
       - name: Configure Electron sandbox for CI
         working-directory: apps/desktop
         run: |
