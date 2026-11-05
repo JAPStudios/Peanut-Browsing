@@ -186,7 +186,7 @@ function safeExportSegment(value) {
 
 function pageExportPath(value, usedPaths) {
     const url = new URL(value);
-    if (!['http:', 'https:'].includes(url.protocol) || url.username || url.password) {
+    if (!['http:', 'https:', 'peanut-site:'].includes(url.protocol) || url.username || url.password) {
         throw new Error('An imported page has an invalid source address.');
     }
     const segments = url.pathname.split('/').filter(Boolean).map(safeExportSegment);
@@ -226,7 +226,7 @@ function rewritePageLinks(html, sourceUrl, currentPath, pagePaths) {
         (whole, prefix, quote, rawHref) => {
             try {
                 const target = new URL(rawHref.replace(/&amp;/gi, '&'), sourceUrl);
-                if (!['http:', 'https:'].includes(target.protocol)) return whole;
+                if (!['http:', 'https:', 'peanut-site:'].includes(target.protocol)) return whole;
                 const hash = target.hash;
                 target.hash = '';
                 const destination = pagePaths.get(target.href);
@@ -414,7 +414,7 @@ async function createWebsite(importRoot, input) {
     const name = typeof input?.name === 'string' ? input.name.trim() : '';
     if (!name || name.length > 80) throw new Error('Enter a website name of 1 to 80 characters.');
     const siteId = fingerprint(crypto.randomUUID() + name).slice(0, 20);
-    const websiteUrl = 'https://' + siteId + '.peanut.local/';
+    const websiteUrl = 'peanut-site://' + siteId + '/';
     const pageId = fingerprint(websiteUrl);
     const page = makeAuthoredPage(websiteUrl, name);
     const siteDirectory = path.join(importRoot, siteId);
