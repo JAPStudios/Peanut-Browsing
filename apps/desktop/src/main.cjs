@@ -1,5 +1,6 @@
 const path = require('node:path');
-const { app, BaseWindow, BrowserWindow, WebContentsView, ipcMain, Menu } = require('electron');
+const crypto = require('node:crypto');
+const { app, BaseWindow, BrowserWindow, WebContentsView, ipcMain, Menu, session } = require('electron');
 const { crawlSite } = require('./importer.cjs');
 const { listImportedSites, readImportedPage, saveImportedPage } = require('./import-library.cjs');
 
@@ -58,7 +59,8 @@ function browserState() {
             id: tab.id,
             title: tab.title || 'New Tab',
             url: tab.url || '',
-            loading: Boolean(tab.loading)
+            loading: Boolean(tab.loading),
+            private: Boolean(tab.private)
         })),
         canGoBack: active ? active.view.webContents.navigationHistory.canGoBack() : false,
         canGoForward: active ? active.view.webContents.navigationHistory.canGoForward() : false,
@@ -134,6 +136,9 @@ function attachTabEvents(tab) {
             if (chromeView && !chromeView.webContents.isDestroyed()) {
                 chromeView.webContents.send('peanut:focus-address');
             }
+        } else if (modifier && key === 't' && input.shift) {
+            event.preventDefault();
+            createTab(null, true, true);
         } else if (modifier && key === 't') {
             event.preventDefault();
             createTab();
@@ -158,11 +163,12 @@ function attachTabEvents(tab) {
     });
 }
 
-function createTab(destination = null, activate = true) {
+function createTab(destination = null, activate = true, isPrivate = false) {
     const id = String(nextTabId++);
+    const partition = isPrivate ? 'private-' + crypto.randomUUID() : 'persist:peanut-browser';
     const view = new WebContentsView({
         webPreferences: {
-            partition: 'persist:peanut-browser',
+            partition,
             sandbox: true,
             contextIsolation: true,
             nodeIntegration: false,
@@ -171,7 +177,7 @@ function createTab(destination = null, activate = true) {
             spellcheck: true
         }
     });
-    const tab = { id, view, title: 'New Tab', url: '', loading: false };
+    const tab = { id, view, title: isPrivate ? 'Private Tab' : 'New Tab', url: '', loading: false, private: isPrivate, partition };
     tabs.set(id, tab);
     attachTabEvents(tab);
 
@@ -210,6 +216,14 @@ function closeTab(id) {
     if (wasActive) windowRef.contentView.removeChildView(tab.view);
     tabs.delete(tab.id);
     tab.view.webContents.close();
+    if (tab.private) {
+        const privateSession = session.fromPartition(tab.partition);
+        Promise.all([
+            privateSession.clearStorageData(),
+            privateSession.clearCache(),
+            privateSession.clearAuthCache()
+        ]).catch(() => {});
+    }
 
     if (tabs.size === 0) {
         createTab();
@@ -299,6 +313,10 @@ function registerIpc() {
     ipcMain.handle('peanut:new-tab', event => {
         if (!isChrome(event)) throw new Error('Not authorised.');
         return createTab();
+    });
+    ipcMain.handle('peanut:new-private-tab', event => {
+        if (!isChrome(event)) throw new Error('Not authorised.');
+        return createTab(null, true, true);
     });
     ipcMain.handle('peanut:close-tab', (event, id) => {
         if (!isChrome(event)) throw new Error('Not authorised.');
