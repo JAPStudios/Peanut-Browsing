@@ -2,6 +2,7 @@ const api = window.peanutBrowser;
 const tabsElement = document.getElementById('tabs');
 const addressElement = document.getElementById('address');
 const statusElement = document.getElementById('page-status');
+const protectionStatusElement = document.getElementById('protection-status');
 const backButton = document.getElementById('back');
 const forwardButton = document.getElementById('forward');
 const reloadButton = document.getElementById('reload');
@@ -53,6 +54,11 @@ function render(state) {
     statusElement.textContent = state.loading
         ? 'Loading page…'
         : (active?.private ? 'Private browsing' : (active?.title || 'Peanut Browsing'));
+    protectionStatusElement.textContent = state.trackingProtection === 'enabled'
+        ? 'Tracking protection: active'
+        : (state.trackingProtection === 'unavailable'
+            ? 'Tracking protection: unavailable'
+            : 'Tracking protection: initializing');
 }
 
 document.getElementById('address-form').addEventListener('submit', event => {
