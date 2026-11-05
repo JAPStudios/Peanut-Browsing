@@ -1,6 +1,7 @@
 const path = require('node:path');
-const { app, BaseWindow, WebContentsView, ipcMain, Menu } = require('electron');
+const { app, BaseWindow, BrowserWindow, WebContentsView, ipcMain, Menu } = require('electron');
 const { crawlSite } = require('./importer.cjs');
+const { listImportedSites, readImportedPage, saveImportedPage } = require('./import-library.cjs');
 
 const TOOLBAR_HEIGHT = 104;
 const NEW_TAB_FILE = path.join(__dirname, 'newtab.html');
@@ -8,6 +9,7 @@ const SEARCH_TEMPLATE = process.env.PEANUT_SEARCH_URL || 'http://127.0.0.1:8080/
 
 let windowRef;
 let chromeView;
+let libraryWindow = null;
 let activeTabId = null;
 let nextTabId = 1;
 const tabs = new Map();
@@ -233,12 +235,56 @@ function navigateActive(input) {
     return true;
 }
 
+function createLibraryWindow() {
+    if (libraryWindow && !libraryWindow.isDestroyed()) {
+        libraryWindow.focus();
+        return;
+    }
+    libraryWindow = new BrowserWindow({
+        width: 1120,
+        height: 820,
+        minWidth: 760,
+        minHeight: 560,
+        title: 'Peanut Browsing — Imported Sites',
+        webPreferences: {
+            preload: path.join(__dirname, 'preload.cjs'),
+            sandbox: true,
+            contextIsolation: true,
+            nodeIntegration: false
+        }
+    });
+    libraryWindow.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
+    libraryWindow.loadFile(path.join(__dirname, 'library.html'));
+    libraryWindow.on('closed', () => {
+        libraryWindow = null;
+    });
+}
+
 function registerIpc() {
     const isChrome = event => chromeView && event.sender === chromeView.webContents;
+    const isTrustedUi = event => isChrome(event) ||
+        (libraryWindow && !libraryWindow.isDestroyed() && event.sender === libraryWindow.webContents);
+    const importRoot = () => path.join(app.getPath('userData'), 'imports');
 
     ipcMain.handle('peanut:navigate', (event, value) => {
         if (!isChrome(event)) throw new Error('Not authorised.');
         return navigateActive(value);
+    });
+    ipcMain.handle('peanut:open-library', event => {
+        if (!isChrome(event)) throw new Error('Not authorised.');
+        createLibraryWindow();
+    });
+    ipcMain.handle('peanut:list-imports', event => {
+        if (!isTrustedUi(event)) throw new Error('Not authorised.');
+        return listImportedSites(importRoot());
+    });
+    ipcMain.handle('peanut:read-imported-page', (event, input) => {
+        if (!isTrustedUi(event)) throw new Error('Not authorised.');
+        return readImportedPage(importRoot(), input?.siteId, input?.pageId);
+    });
+    ipcMain.handle('peanut:save-imported-page', (event, input) => {
+        if (!isTrustedUi(event)) throw new Error('Not authorised.');
+        return saveImportedPage(importRoot(), input);
     });
     ipcMain.handle('peanut:import-site', async event => {
         if (!isChrome(event)) throw new Error('Not authorised.');
