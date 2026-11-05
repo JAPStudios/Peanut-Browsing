@@ -6,7 +6,7 @@ const { ElectronBlocker, adsAndTrackingLists } = require('@ghostery/adblocker-el
 const { app, BaseWindow, BrowserWindow, WebContentsView, ipcMain, Menu, session } = require('electron');
 const { crawlSite } = require('./importer.cjs');
 const { listImportedSites, readImportedPage, saveImportedPage } = require('./import-library.cjs');
-const { createProfileStore } = require('./profile-store.cjs');
+const { createProfileStore, normalizeUrl } = require('./profile-store.cjs');
 
 const TOOLBAR_HEIGHT = 104;
 const NEW_TAB_FILE = path.join(__dirname, 'newtab.html');
@@ -74,7 +74,7 @@ function browserState() {
         loading: active ? Boolean(active.loading) : false,
         trackingProtection: protectionStatus,
         isBookmarked: Boolean(active && profileStore &&
-            profileStore.getState().bookmarks.some(item => item.url === active.url))
+            profileStore.getState().bookmarks.some(item => item.url === normalizeUrl(active.url)))
     };
 }
 
