@@ -530,18 +530,11 @@ function registerIpc() {
     });
     ipcMain.handle('peanut:export-site', async (event, siteId) => {
         if (!isTrustedUi(event)) throw new Error('Not authorised.');
-        const parent = libraryWindow && !libraryWindow.isDestroyed() ? libraryWindow : windowRef;
-        const selection = parent && !parent.isDestroyed()
-            ? await dialog.showOpenDialog(parent, {
-                title: 'Choose a folder for the exported website',
-                buttonLabel: 'Export here',
-                properties: ['openDirectory', 'createDirectory']
-            })
-            : await dialog.showOpenDialog({
-                title: 'Choose a folder for the exported website',
-                buttonLabel: 'Export here',
-                properties: ['openDirectory', 'createDirectory']
-            });
+        const selection = await dialog.showOpenDialog({
+            title: 'Choose a folder for the exported website',
+            buttonLabel: 'Export here',
+            properties: ['openDirectory', 'createDirectory']
+        });
         if (selection.canceled || !selection.filePaths[0]) return { status: 'cancelled' };
         return exportImportedSite(importRoot(), siteId, selection.filePaths[0]);
     });
