@@ -402,6 +402,7 @@ function registerIpc() {
         if (importInProgress) throw new Error('Another website import is already running.');
         const tab = activeTab();
         if (!tab) throw new Error('No active tab is available.');
+        if (tab.private) throw new Error('Website import is disabled in private tabs.');
         importInProgress = true;
         try {
             return await crawlSite(tab.view.webContents.getURL(), progress => {
