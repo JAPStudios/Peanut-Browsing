@@ -224,29 +224,36 @@ def tokenize_query(query: str) -> list[str]:
 
 
 def build_fts_query(query: str) -> str:
-    """Build a parameter-safe FTS5 expression with AND terms and quoted phrases."""
+    """Build a bounded FTS5 expression with AND terms, OR groups, and quoted phrases."""
     if not isinstance(query, str) or len(query) > 200:
         raise ValueError("Search phrases must contain between 1 and 200 characters.")
-    parts = []
+    groups = [[]]
     token_count = 0
-    for match in re.finditer(r'"([^"]+)"|([^"]+)', query):
-        phrase, plain = match.group(1), match.group(2)
+    for match in re.finditer(r'"([^"]+)"|\b(OR)\b|([^"]+)', query, flags=re.IGNORECASE):
+        phrase, operator, plain = match.group(1), match.group(2), match.group(3)
+        if operator:
+            if groups[-1]:
+                groups.append([])
+            continue
         if phrase is not None:
             tokens = re.findall(r"[\w]{2,}", phrase.casefold(), flags=re.UNICODE)
             tokens = tokens[:max(0, 12 - token_count)]
             if tokens:
                 token_count += len(tokens)
-                parts.append('"' + " ".join(tokens) + '"')
+                groups[-1].append('"' + " ".join(tokens) + '"')
         else:
             tokens = re.findall(r"[\w]{2,}", plain.casefold(), flags=re.UNICODE)
             for token in tokens:
+                if token_count >= 12:
+                    break
                 token_count += 1
-                parts.append('"' + token.replace('"', '""') + '"')
+                groups[-1].append('"' + token.replace('"', '""') + '"')
         if token_count >= 12:
             break
-    if not parts:
+    expressions = [" AND ".join(group) for group in groups if group]
+    if not expressions:
         raise ValueError("Enter at least one search term containing two or more characters.")
-    return " AND ".join(parts[:12])
+    return " OR ".join(expressions)
 
 
 class IndexStore:
