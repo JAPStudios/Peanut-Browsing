@@ -64,3 +64,9 @@ export function normalizeSearchResults(results) {
     }
     return normalized;
 }
+
+export function normalizeTotalResults(value) {
+    if (value === null || value === undefined) return null;
+    const total = Number(value);
+    return Number.isFinite(total) && total >= 0 ? total : null;
+}
