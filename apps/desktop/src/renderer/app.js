@@ -3,6 +3,7 @@ const tabsElement = document.getElementById('tabs');
 const addressElement = document.getElementById('address');
 const statusElement = document.getElementById('page-status');
 const protectionStatusElement = document.getElementById('protection-status');
+const downloadStatusElement = document.getElementById('download-status');
 const backButton = document.getElementById('back');
 const forwardButton = document.getElementById('forward');
 const reloadButton = document.getElementById('reload');
@@ -63,6 +64,7 @@ function render(state) {
         : (state.trackingProtection === 'unavailable'
             ? 'Tracking protection: unavailable'
             : 'Tracking protection: initializing');
+    downloadStatusElement.textContent = state.downloadStatus || 'Downloads ready';
 }
 
 document.getElementById('address-form').addEventListener('submit', event => {
