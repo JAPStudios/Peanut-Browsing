@@ -12,6 +12,9 @@ const MAX_ASSETS_PER_PAGE = 20;
 const MAX_TOTAL_ASSETS = 300;
 const MAX_ASSET_BYTES = 2 * 1024 * 1024;
 const MAX_TOTAL_ASSET_BYTES = 50 * 1024 * 1024;
+const MAX_SITEMAPS = 10;
+const MAX_SITEMAP_CHARS = 2 * 1024 * 1024;
+const MAX_ROBOTS_CHARS = 512 * 1024;
 const PAGE_TIMEOUT_MS = 20000;
 
 function normalizeHttpUrl(value, requiredOrigin) {
@@ -116,6 +119,101 @@ async function readLimitedBody(response, limit) {
         chunks.push(Buffer.from(result.value));
     }
     return Buffer.concat(chunks, size);
+}
+
+
+function decodeXml(value) {
+    const decodePoint = number => {
+        const point = Number(number);
+        return point >= 0 && point <= 0x10FFFF && !(point >= 0xD800 && point <= 0xDFFF)
+            ? String.fromCodePoint(point)
+            : '';
+    };
+    return value.replace(/<!\\[CDATA\\[([\\s\\S]*?)\\]\\]>/g, '$1')
+        .replace(/&amp;/gi, '&').replace(/&quot;/gi, '"')
+        .replace(/&apos;|&#39;/gi, "'").replace(/&lt;/gi, '<')
+        .replace(/&gt;/gi, '>').replace(/&#(\\d+);/g, (_, n) => decodePoint(n))
+        .replace(/&#x([\\da-f]+);/gi, (_, n) => decodePoint(parseInt(n, 16)));
+}
+
+function extractSitemapLocations(xml) {
+    const locations = [];
+    const pattern = /<(?:[\\w.-]+:)?loc\\b[^>]*>([\\s\\S]*?)<\\/(?:[\\w.-]+:)?loc\\s*>/gi;
+    let match;
+    while ((match = pattern.exec(xml)) && locations.length < MAX_PAGES * 8) {
+        const location = decodeXml(match[1].trim());
+        if (location) locations.push(location);
+    }
+    return locations;
+}
+
+async function fetchLimitedText(browserSession, value, limit) {
+    try {
+        const response = await browserSession.fetch(value, {
+            method: 'GET',
+            credentials: 'include',
+            redirect: 'manual',
+            signal: AbortSignal.timeout(15000)
+        });
+        if (!response.ok || (response.status >= 300 && response.status < 400)) return null;
+        const declaredSize = Number(response.headers.get('content-length') || 0);
+        if (declaredSize > limit) return null;
+        const bytes = await readLimitedBody(response, limit);
+        return bytes ? bytes.toString('utf8') : null;
+    } catch {
+        return null;
+    }
+}
+
+async function discoverSitemapPages(browserSession, origin) {
+    const sitemapQueue = [];
+    const queuedSitemaps = new Set();
+    const robotsUrl = new URL('/robots.txt', origin).href;
+    const robots = await fetchLimitedText(browserSession, robotsUrl, MAX_ROBOTS_CHARS);
+    if (robots) {
+        for (const line of robots.split(/\\r?\\n/)) {
+            const match = line.match(/^\\s*sitemap\\s*:\\s*(\\S+)/i);
+            if (!match) continue;
+            const sitemap = normalizeHttpUrl(match[1], origin);
+            if (sitemap && !queuedSitemaps.has(sitemap.href) && sitemapQueue.length < MAX_SITEMAPS) {
+                queuedSitemaps.add(sitemap.href);
+                sitemapQueue.push(sitemap.href);
+            }
+        }
+    }
+    if (sitemapQueue.length === 0) {
+        const fallback = new URL('/sitemap.xml', origin).href;
+        queuedSitemaps.add(fallback);
+        sitemapQueue.push(fallback);
+    }
+
+    const checkedSitemaps = new Set();
+    const pageUrls = new Set();
+    while (sitemapQueue.length > 0 && checkedSitemaps.size < MAX_SITEMAPS &&
+        pageUrls.size < MAX_PAGES * 8) {
+        const sitemapAddress = sitemapQueue.shift();
+        if (checkedSitemaps.has(sitemapAddress)) continue;
+        checkedSitemaps.add(sitemapAddress);
+        const xml = await fetchLimitedText(browserSession, sitemapAddress, MAX_SITEMAP_CHARS);
+        if (!xml) continue;
+
+        const isIndex = /<(?:[\\w.-]+:)?sitemapindex\\b/i.test(xml);
+        for (const location of extractSitemapLocations(xml)) {
+            const normalized = normalizeHttpUrl(location, origin);
+            if (!normalized) continue;
+            if (isIndex) {
+                if (checkedSitemaps.size + sitemapQueue.length < MAX_SITEMAPS &&
+                    !queuedSitemaps.has(normalized.href)) {
+                    queuedSitemaps.add(normalized.href);
+                    sitemapQueue.push(normalized.href);
+                }
+            } else {
+                pageUrls.add(normalized.href);
+            }
+            if (pageUrls.size >= MAX_PAGES * 8) break;
+        }
+    }
+    return { sitemapCount: checkedSitemaps.size, pages: Array.from(pageUrls) };
 }
 
 async function downloadAsset(browserSession, value, origin, directory, assetState) {
@@ -234,6 +332,16 @@ async function crawlSite(startAddress, onProgress = () => {}) {
     const browserSession = contents.session;
     const assetState = { byUrl: new Map(), pending: new Map(), totalBytes: 0, reservedBytes: 0 };
 
+    onProgress({ status: 'discovering-sitemaps', websiteUrl: origin, completed: 0, limit: MAX_PAGES });
+    const sitemapDiscovery = await discoverSitemapPages(browserSession, origin);
+    for (const sitemapPage of sitemapDiscovery.pages) {
+        if (queued.size >= MAX_PAGES * 8) break;
+        if (!queued.has(sitemapPage)) {
+            queued.add(sitemapPage);
+            queue.push(sitemapPage);
+        }
+    }
+
     try {
         while (queue.length > 0 && visited.size < MAX_PAGES) {
             const address = queue.shift();
@@ -286,6 +394,8 @@ async function crawlSite(startAddress, onProgress = () => {}) {
             startUrl: start.href,
             importedAt: new Date().toISOString(),
             pageCount: saved.length,
+            sitemapCount: sitemapDiscovery.sitemapCount,
+            sitemapPageCount: sitemapDiscovery.pages.length,
             assetCount: assetState.byUrl.size,
             assetBytes: assetState.totalBytes,
             assets: Array.from(assetState.byUrl.values()),
@@ -299,6 +409,8 @@ async function crawlSite(startAddress, onProgress = () => {}) {
             websiteUrl: origin,
             pageCount: saved.length,
             errorCount: errors.length,
+            sitemapCount: sitemapDiscovery.sitemapCount,
+            sitemapPageCount: sitemapDiscovery.pages.length,
             assetCount: assetState.byUrl.size,
             assetBytes: assetState.totalBytes,
             manifestPath: path.join(importDirectory, 'manifest.json')
