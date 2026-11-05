@@ -39,6 +39,8 @@ The HTTP function returns `status`, `query`, `page`, `results`, `resultCount`, `
 
 Queries are limited to 200 characters; page numbers are limited to 1–20. Only HTTP and HTTPS result links are returned. Duplicate URLs are removed. Titles and snippets are rendered as text, not HTML.
 
+Search terms separated by spaces must all match. Use `OR` between alternatives. Double quotes request an exact phrase, for example `peanut browser`, `peanut OR browser`, or `"peanut browsing"`.
+
 ## Verification
 
 The repository contains the first-party index implementation and Wix HTTP-function adapter. The production route is not verified live until the Wix backend is published, the gateway is reachable over HTTPS, both Wix secrets are set, and a real search request returns indexed results.
