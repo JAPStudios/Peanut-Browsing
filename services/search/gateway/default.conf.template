@@ -3,7 +3,7 @@ map $http_x_api_key $peanut_search_key_valid {
     "${PEANUT_SEARCH_API_KEY}" 1;
 }
 
-limit_req_zone $server_name zone=peanut_search:10m rate=2r/s;
+limit_req_zone $binary_remote_addr zone=peanut_search:10m rate=2r/s;
 
 server {
     listen 8080;
