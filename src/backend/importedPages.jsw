@@ -1,0 +1,120 @@
+import wixData from 'wix-data';
+
+const COLLECTION_ID = 'peanut-imported-pages';
+const MAX_PAGES_PER_BATCH = 25;
+const MAX_PAGE_CHARS = 350000;
+const MAX_BATCH_ID_LENGTH = 80;
+
+function fail(message) {
+    throw new Error(message);
+}
+
+function cleanText(value, maxLength) {
+    if (value === undefined || value === null) return '';
+    if (typeof value !== 'string') fail('Imported page fields must be text.');
+    return value.trim().slice(0, maxLength);
+}
+
+function parsePublicUrl(value) {
+    if (typeof value !== 'string' || value.length > 2048) fail('A valid public page URL is required.');
+    let url;
+    try {
+        url = new URL(value);
+    } catch (error) {
+        fail('A valid public page URL is required.');
+    }
+    if (!['http:', 'https:'].includes(url.protocol) || url.username || url.password ||
+        url.hostname === 'localhost' || url.hostname.endsWith('.localhost') ||
+        url.hostname.endsWith('.local') || url.hostname.includes(':') ||
+        /^\d{1,3}(?:\.\d{1,3}){3}$/.test(url.hostname)) {
+        fail('Only public-domain HTTP or HTTPS page URLs are accepted.');
+    }
+    url.hash = '';
+    return url;
+}
+
+function stableId(value) {
+    let first = 2166136261;
+    let second = 2246822519;
+    for (let i = 0; i < value.length; i += 1) {
+        const code = value.charCodeAt(i);
+        first = Math.imul(first ^ code, 16777619);
+        second = Math.imul(second ^ code, 3266489917);
+    }
+    return 'pb' + (first >>> 0).toString(36) + (second >>> 0).toString(36);
+}
+
+function normalizePage(page, siteOrigin, batchId) {
+    if (!page || typeof page !== 'object' || Array.isArray(page)) fail('Each imported page must be an object.');
+
+    const source = parsePublicUrl(page.sourceUrl);
+    if (source.origin !== siteOrigin) fail('Every page in an import batch must belong to the same website.');
+
+    const canonical = page.canonicalUrl ? parsePublicUrl(page.canonicalUrl) : source;
+    if (canonical.origin !== siteOrigin) fail('Canonical page URLs must remain on the imported website.');
+
+    const html = cleanText(page.html, MAX_PAGE_CHARS);
+    const textContent = cleanText(page.textContent, MAX_PAGE_CHARS);
+    if (!html && !textContent) fail('Each imported page must contain HTML or extracted text.');
+    if (html.length + textContent.length > MAX_PAGE_CHARS) {
+        fail('An imported page exceeds the storage limit. Reduce its content before saving.');
+    }
+
+    const title = cleanText(page.title, 512);
+    const description = cleanText(page.description, 4000);
+    const language = cleanText(page.language, 35);
+    const contentFingerprint = stableId(html + '\n' + textContent);
+
+    return {
+        _id: stableId(source.href),
+        sourceUrl: source.href,
+        canonicalUrl: canonical.href,
+        title,
+        description,
+        language,
+        html,
+        textContent,
+        pageStatus: 'stored-for-review',
+        importBatchId: batchId,
+        sourceHash: contentFingerprint,
+        importedAt: new Date()
+    };
+}
+
+/**
+ * Stores owner-submitted page content in the private Peanut Browsing CMS collection.
+ * Pages are upserted by a stable URL-derived ID, so repeat imports update a page
+ * rather than creating duplicate records. Imported markup must be sanitized before
+ * it is ever rendered.
+ */
+export async function saveImportedPages(payload) {
+    if (!payload || typeof payload !== 'object' || Array.isArray(payload)) {
+        fail('An import batch is required.');
+    }
+
+    const website = parsePublicUrl(payload.websiteUrl);
+    const batchId = cleanText(payload.importBatchId, MAX_BATCH_ID_LENGTH);
+    if (!batchId) fail('An import batch ID is required.');
+
+    if (!Array.isArray(payload.pages) || payload.pages.length === 0 ||
+        payload.pages.length > MAX_PAGES_PER_BATCH) {
+        fail('Submit between 1 and ' + MAX_PAGES_PER_BATCH + ' pages per batch.');
+    }
+
+    const pages = payload.pages.map(page => normalizePage(page, website.origin, batchId));
+    const result = await wixData.bulkSave(COLLECTION_ID, pages, { suppressAuth: true });
+
+    return {
+        status: 'stored',
+        websiteUrl: website.origin,
+        importBatchId: batchId,
+        requestedCount: pages.length,
+        insertedCount: result.inserted || 0,
+        updatedCount: result.updated || 0,
+        skippedCount: result.skipped || 0,
+        errors: (result.errors || []).map(error => ({
+            itemId: error.itemId || null,
+            message: String(error.message || 'The page could not be stored.')
+        }))
+    };
+}
