@@ -296,7 +296,7 @@ async function crawlSite(startAddress, onProgress = () => {}) {
         width: 1000,
         height: 760,
         webPreferences: {
-            partition: 'persist:peanut-browser',
+            partition: 'peanut-import-' + crypto.randomUUID(),
             sandbox: true,
             contextIsolation: true,
             nodeIntegration: false,
