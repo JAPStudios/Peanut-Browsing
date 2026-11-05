@@ -8,6 +8,7 @@ requires the shared gateway key for search and crawl operations.
 from __future__ import annotations
 
 import hmac
+import http.client
 from contextlib import contextmanager
 import ipaddress
 import json
@@ -74,13 +75,85 @@ class SafeRedirectHandler(HTTPRedirectHandler):
         return super().redirect_request(request, fp, code, message, headers, new_url)
 
 
+def connect_public_host(host: str, port: int, timeout: int, source_address=None):
+    """Resolve once, reject mixed/private DNS answers, and connect to a checked IP."""
+    try:
+        records = socket.getaddrinfo(host, port, type=socket.SOCK_STREAM)
+    except OSError as error:
+        raise ValueError("The website address could not be resolved.") from error
+    if not records:
+        raise ValueError("The website address could not be resolved.")
+
+    candidates = []
+    for family, socktype, protocol, _, address in records:
+        try:
+            ip = ipaddress.ip_address(address[0].split("%")[0])
+        except ValueError as error:
+            raise ValueError("The website address resolved to an invalid network address.") from error
+        if not ip.is_global:
+            raise ValueError("The website address resolves to a private or reserved network.")
+        candidates.append((family, socktype, protocol, address))
+
+    last_error = None
+    for family, socktype, protocol, address in candidates:
+        connection = socket.socket(family, socktype, protocol)
+        try:
+            connection.settimeout(timeout)
+            if source_address:
+                connection.bind(source_address)
+            connection.connect(address)
+            return connection
+        except OSError as error:
+            last_error = error
+            connection.close()
+    if last_error:
+        raise last_error
+    raise OSError("No public network address was available.")
+
+
+class PublicHTTPConnection(http.client.HTTPConnection):
+    def connect(self):
+        self.sock = connect_public_host(self.host, self.port, self.timeout, self.source_address)
+        if self._tunnel_host:
+            self._tunnel()
+
+
+class PublicHTTPSConnection(http.client.HTTPSConnection):
+    def connect(self):
+        self.sock = connect_public_host(self.host, self.port, self.timeout, self.source_address)
+        if self._tunnel_host:
+            self._tunnel()
+        server_hostname = self._tunnel_host or self.host
+        self.sock = self._context.wrap_socket(self.sock, server_hostname=server_hostname)
+
+
+class PublicHTTPHandler(HTTPHandler):
+    def http_open(self, request):
+        return self.do_open(PublicHTTPConnection, request)
+
+
+class PublicHTTPSHandler(HTTPSHandler):
+    def https_open(self, request):
+        return self.do_open(
+            PublicHTTPSConnection,
+            request,
+            context=self._context,
+            check_hostname=self._check_hostname,
+        )
+
+
 def fetch_bytes(url: str, timeout: int = 8) -> tuple[bytes, str, str]:
     safe_url = validate_public_url(url, resolve=True)
     request = Request(safe_url, headers={
         "User-Agent": USER_AGENT,
         "Accept": "text/html,application/xhtml+xml,text/plain;q=0.8,*/*;q=0.1",
     })
-    opener = build_opener(SafeRedirectHandler())
+    opener = build_opener(
+        ProxyHandler({}),
+        SafeRedirectHandler(),
+        PublicHTTPHandler(),
+        PublicHTTPSHandler(),
+    )
     with opener.open(request, timeout=timeout) as response:
         content_type = response.headers.get("Content-Type", "").lower()
         body = response.read(MAX_BODY_BYTES + 1)
