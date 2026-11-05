@@ -54,6 +54,10 @@ jobs:
         run: node --check apps/desktop/src/import-library.cjs
       - name: Check browser profile store
         run: node --check apps/desktop/src/profile-store.cjs
+      - name: Check first-party search result normalizer
+        run: node --check apps/desktop/src/search-page.cjs
+      - name: Check search results interface
+        run: node --check apps/desktop/src/search.js
       - name: Check sitemap utilities
         run: node --check apps/desktop/src/sitemap-utils.cjs
       - name: Check page version merger
