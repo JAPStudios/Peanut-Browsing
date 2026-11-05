@@ -171,6 +171,7 @@ test('creates an independent website, adds pages, then exports the authored site
     assert.ok(firstPage.html.includes('<h1>My Independent Website</h1>'));
 
     const about = await createWebsitePage(root, { siteId: created.id, path: 'about/team' });
+    assert.equal(about.url, 'peanut-site://' + created.id + '/about/team/');
     assert.equal(about.title, 'Team');
     assert.equal(about.pageCount, 2);
     await assert.rejects(
