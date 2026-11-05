@@ -21,7 +21,7 @@ searchForm.addEventListener('submit', event => {
         searchInput.reportValidity();
         return;
     }
-    if (!/[\p{L}\p{N}_]{2,}/u.test(query)) {
+    if (!/[\p{L}\p{N}]{2,}/u.test(query)) {
         searchInput.setCustomValidity('Enter at least one search term containing two or more characters.');
         searchInput.reportValidity();
         return;
