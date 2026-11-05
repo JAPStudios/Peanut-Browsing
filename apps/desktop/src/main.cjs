@@ -14,6 +14,9 @@ protocol.registerSchemesAsPrivileged([{
         corsEnabled: true,
         stream: true
     }
+} , {
+    scheme: 'peanut-search',
+    privileges: { standard: true, secure: true, supportFetchAPI: true, corsEnabled: true }
 }]);
 const { crawlSite } = require('./importer.cjs');
 const { listImportedSites, readImportedPage, saveImportedPage, exportImportedSite, createWebsite, createWebsitePage } = require('./import-library.cjs');
@@ -24,7 +27,7 @@ const TOOLBAR_HEIGHT = 104;
 const NEW_TAB_FILE = path.join(__dirname, 'newtab.html');
 const SEARCH_PAGE_FILE = path.join(__dirname, 'search.html');
 const SEARCH_TEMPLATE = process.env.PEANUT_SEARCH_URL || 'https://japbstudios.wixsite.com/peanut-browsing/_functions/peanutSearch?q={query}&page=1';
-const { normalizeSearchPayload } = require('./search-page.cjs');
+const { normalizeSearchPayload, parseSearchNavigation } = require('./search-page.cjs');
 
 let windowRef;
 let chromeView;
@@ -116,7 +119,19 @@ async function fetchSearchResults(query, page) {
 }
 
 async function showSearchResults(tab, query, page = 1) {
-    const results = await fetchSearchResults(query, page);
+    let results;
+    try {
+        results = { ...await fetchSearchResults(query, page), page };
+    } catch (error) {
+        results = {
+            query: String(query || '').trim(),
+            page,
+            results: [],
+            totalResults: null,
+            hasNextPage: false,
+            error: error.message || 'Peanut Browsing search could not be completed.'
+        };
+    }
     tab.searchQuery = query;
     tab.searchPage = page;
     tab.loading = true;
@@ -301,6 +316,13 @@ function attachTabEvents(tab) {
 
     contents.on('will-navigate', (event, details) => {
         const destination = typeof details === 'string' ? details : details?.url;
+        const searchRequest = parseSearchNavigation(destination);
+        if (searchRequest) {
+            event.preventDefault();
+            showSearchResults(tab, searchRequest.query, searchRequest.page)
+                .catch(error => console.error('Peanut Browsing could not render search results:', error));
+            return;
+        }
         if (!safeWebUrl(destination)) event.preventDefault();
     });
     contents.on('will-redirect', (event, details) => {
