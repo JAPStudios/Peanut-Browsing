@@ -51,6 +51,19 @@
           "invoke": true
         }
       }
+    },
+    "backend/indexedWebsites.jsw": {
+      "indexWebsite": {
+        "siteOwner": {
+          "invoke": true
+        },
+        "siteMember": {
+          "invoke": false
+        },
+        "anonymous": {
+          "invoke": false
+        }
+      }
     }
   }
 }
