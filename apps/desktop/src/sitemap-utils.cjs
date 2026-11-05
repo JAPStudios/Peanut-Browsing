@@ -54,12 +54,35 @@ function normalizeAssetUrl(value, requiredOrigin) {
     if (!url) return null;
     if (url.origin === requiredOrigin) return url;
     if (url.protocol !== 'https:') return null;
-    const trustedCdn = [
+    const trustedExactHosts = new Set([
+        'fonts.googleapis.com',
+        'fonts.gstatic.com',
+        'cdn.jsdelivr.net',
+        'cdnjs.cloudflare.com',
+        'unpkg.com',
+        'cdn.builder.io',
+        'images.ctfassets.net',
+        'i0.wp.com'
+    ]);
+    const trustedCdnSuffixes = [
         '.wixstatic.com',
         '.parastorage.com',
         '.wixmp.com',
-        '.filesusr.com'
-    ].some(suffix => url.hostname.endsWith(suffix));
+        '.filesusr.com',
+        '.wp.com',
+        '.wordpress.com',
+        '.shopify.com',
+        '.shopifycdn.net',
+        '.squarespace-cdn.com',
+        '.squarespace.com',
+        '.website-files.com',
+        '.webflow.com',
+        '.googleusercontent.com',
+        '.gstatic.com',
+        '.unsplash.com'
+    ];
+    const trustedCdn = trustedExactHosts.has(url.hostname) ||
+        trustedCdnSuffixes.some(suffix => url.hostname.endsWith(suffix));
     return trustedCdn ? url : null;
 }
 
