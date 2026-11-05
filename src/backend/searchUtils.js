@@ -62,7 +62,7 @@ export function validateSearchEndpoint(value) {
     try { endpoint = new URL(value.trim()); } catch (error) {
         throw new Error('The search service address is not configured correctly.');
     }
-    const hostname = endpoint.hostname.toLowerCase().replace(/^\\[|\\]$/g, '');
+    const hostname = endpoint.hostname.toLowerCase().replace(/^\[|\]$/g, '');
     if (endpoint.protocol !== 'https:' || endpoint.username || endpoint.password ||
         hostname === 'localhost' || hostname.endsWith('.localhost') || hostname.endsWith('.local') ||
         hostname.endsWith('.internal') || hostname.endsWith('.test') || hostname.endsWith('.invalid') ||
@@ -70,7 +70,17 @@ export function validateSearchEndpoint(value) {
         throw new Error('The search service must use a public HTTPS address.');
     }
     endpoint.hash = '';
+    endpoint.search = '';
+    endpoint.pathname = endpoint.pathname.replace(/\/+$/, '') + '/';
     return endpoint;
+}
+
+export function buildSearchServiceUrl(endpoint, route) {
+    if (!(endpoint instanceof URL) || !['search', 'crawl'].includes(route)) {
+        throw new Error('A validated search endpoint and supported route are required.');
+    }
+    const basePath = endpoint.pathname.replace(/\/+$/, '');
+    return new URL(basePath + '/index/' + route, endpoint.origin);
 }
 
 export function normalizeSearchResults(results) {

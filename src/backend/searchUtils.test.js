@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { normalizeSearchResults, normalizeTotalResults, validatePublicWebsiteUrl, validateSearchEndpoint, validateSearchRequest } from './searchUtils.js';
+import { buildSearchServiceUrl, normalizeSearchResults, normalizeTotalResults, validatePublicWebsiteUrl, validateSearchEndpoint, validateSearchRequest } from './searchUtils.js';
 
 test('normalizes search phrases and validates page numbers', () => {
     assert.deepEqual(validateSearchRequest('  peanut   browsing ', 2), { query: 'peanut browsing', page: 2 });
@@ -15,6 +15,22 @@ test('accepts only public HTTPS search-service endpoints', () => {
         'https://127.0.0.1', 'https://192.168.1.10', 'https://user:pass@search.example.org']) {
         assert.throws(() => validateSearchEndpoint(endpoint), /public HTTPS/);
     }
+});
+
+test('preserves a configured gateway path when building first-party routes', () => {
+    assert.equal(
+        buildSearchServiceUrl(validateSearchEndpoint('https://search.example.org'), 'search').href,
+        'https://search.example.org/index/search'
+    );
+    assert.equal(
+        buildSearchServiceUrl(validateSearchEndpoint('https://example.org/peanut/api/'), 'search').href,
+        'https://example.org/peanut/api/index/search'
+    );
+    assert.equal(
+        buildSearchServiceUrl(validateSearchEndpoint('https://example.org/peanut/api?ignored=yes#fragment'), 'crawl').href,
+        'https://example.org/peanut/api/index/crawl'
+    );
+    assert.throws(() => buildSearchServiceUrl(validateSearchEndpoint('https://search.example.org'), 'admin'));
 });
 
 test('normalizes, deduplicates and filters unsafe search results', () => {

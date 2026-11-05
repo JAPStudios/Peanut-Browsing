@@ -1,3 +1,0 @@
-.env
-*.log
-core-config/limiter.toml

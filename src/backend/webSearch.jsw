@@ -1,7 +1,7 @@
 import { fetch } from 'wix-fetch';
 import { secrets } from 'wix-secrets-backend.v2';
 import { elevate } from 'wix-auth';
-import { normalizeSearchResults, normalizeTotalResults, validateSearchEndpoint, validateSearchRequest } from 'backend/searchUtils';
+import { buildSearchServiceUrl, normalizeSearchResults, normalizeTotalResults, validateSearchEndpoint, validateSearchRequest } from 'backend/searchUtils';
 
 const elevatedGetSecretValue = elevate(secrets.getSecretValue);
 const SEARCH_ENDPOINT_SECRET = 'PEANUT_SEARCH_API_URL';
@@ -23,7 +23,7 @@ export async function searchWeb(query, page) {
     const request = validateSearchRequest(query, page);
     const endpoint = validateSearchEndpoint(await readSecret(SEARCH_ENDPOINT_SECRET));
     const apiKey = await readSecret(SEARCH_API_KEY_SECRET);
-    const url = new URL('/index/search', endpoint.origin);
+    const url = buildSearchServiceUrl(endpoint, 'search');
     url.searchParams.set('q', request.query);
     url.searchParams.set('limit', '20');
     url.searchParams.set('offset', String((request.page - 1) * 20));

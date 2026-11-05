@@ -1,6 +1,6 @@
 # Peanut Browsing first-party search
 
-The website search endpoint queries Peanut Browsing's own SQLite FTS5 index. It does not call SearXNG, Google, Bing, or another external search engine.
+The website search endpoint queries Peanut Browsing's own SQLite FTS5 index. It does not call external search engines.
 
 The published Wix site exposes:
 
@@ -14,14 +14,16 @@ The search adapter calls the authenticated gateway route `GET /index/search`. Th
 
 The Wix backend reads two required Wix Secrets Manager values:
 
-- `PEANUT_SEARCH_API_URL`: public HTTPS origin of the Peanut Browsing index gateway, without a path.
+- `PEANUT_SEARCH_API_URL`: public HTTPS gateway address. A path prefix is permitted when the gateway is mounted below a reverse-proxy path.
 - `PEANUT_SEARCH_API_KEY`: the gateway key matching the first-party index service.
+
+The adapter appends `/index/search` or `/index/crawl` to the configured gateway path. Query strings and fragments in the configured address are ignored. The address must use a public HTTPS host.
 
 No external search provider is configured as a fallback. If the first-party index is unreachable, the search request returns an explicit error rather than silently switching engines.
 
 ## Indexing websites
 
-The first-party index crawler accepts explicitly submitted public website addresses. It obeys `robots.txt`, remains on the submitted website's origin, rejects private/local targets, limits a crawl to 25 pages, and stores extracted titles, URLs, and text in SQLite FTS5. Search uses BM25 ranking.
+The first-party index crawler accepts explicitly submitted public website addresses. It obeys `robots.txt`, remains on the submitted website's origin, rejects private/local targets, limits a crawl to 25 pages, and stores extracted titles, URLs and text in SQLite FTS5. Search uses BM25 ranking.
 
 The crawler does not yet discover the entire public web automatically. Pages appear only after their website has been submitted for indexing. It is therefore an independent first-party search engine foundation, not yet a comprehensive web-scale search index.
 
@@ -35,10 +37,10 @@ Publish the Wix Velo backend after connecting the Git Integration repository. Th
 
 ## Response
 
-The HTTP function returns `status`, `query`, `page`, `results`, `resultCount`, `totalResults`, and `hasNextPage`. Each result contains `title`, `url`, `displayUrl`, `snippet`, `engine`, and `score`.
+The HTTP function returns `status`, `query`, `page`, `results`, `resultCount`, `totalResults` and `hasNextPage`. Each result contains `title`, `url`, `displayUrl`, `snippet`, `engine` and `score`.
 
 Queries are limited to 200 characters; page numbers are limited to 1–20. Only HTTP and HTTPS result links are returned. Duplicate URLs are removed. Titles and snippets are rendered as text, not HTML.
 
 ## Verification
 
-The repository contains the first-party index implementation and Wix HTTP-function adapter. The production route is not verified live until the Wix backend is published, the gateway is reachable over HTTPS, both Wix secrets are set, and a real search request returns indexed results.
+The repository contains the first-party index implementation and Wix HTTP-function adapter. The production route is not verified live until the Wix backend is published, the gateway is reachable over HTTPS, both Wix secrets are set and a real search request returns indexed results.
