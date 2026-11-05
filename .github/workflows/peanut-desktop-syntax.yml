@@ -85,6 +85,11 @@ jobs:
             -H "Accept: application/json" \
             "http://127.0.0.1:8080/search?q=peanut&format=json" -o /tmp/peanut-search.json
           node -e "const data = require('/tmp/peanut-search.json'); if (!Array.isArray(data.results)) process.exit(1);"
+      - name: Diagnose search service if smoke test fails
+        if: failure()
+        run: |
+          docker compose -f services/search/docker-compose.yml ps -a
+          docker compose -f services/search/docker-compose.yml logs --no-color --tail=200 core valkey
       - name: Stop SearXNG search service
         if: always()
         run: |
