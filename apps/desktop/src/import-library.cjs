@@ -348,4 +348,99 @@ async function exportImportedSite(importRoot, siteId, destinationDirectory) {
     };
 }
 
-module.exports = { listImportedSites, readImportedPage, saveImportedPage, exportImportedSite };
+
+function escapeHtmlText(value) {
+    return String(value).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
+function makeAuthoredPage(url, title) {
+    const safeTitle = escapeHtmlText(title);
+    const html = '<!doctype html>\\n<html lang="en">\\n<head>\\n  <meta charset="utf-8">\\n' +
+        '  <meta name="viewport" content="width=device-width, initial-scale=1">\\n' +
+        '  <title>' + safeTitle + '</title>\\n</head>\\n<body>\\n  <main>\\n    <h1>' +
+        safeTitle + '</h1>\\n    <p>Edit this page in Peanut Browsing.</p>\\n  </main>\\n</body>\\n</html>\\n';
+    const sourceHash = fingerprint([title, '', html, title].join('\\n'));
+    return {
+        url,
+        title,
+        description: '',
+        canonicalUrl: url,
+        language: 'en',
+        html,
+        textContent: title,
+        htmlTruncated: false,
+        textTruncated: false,
+        assets: [],
+        sourceTitle: title,
+        sourceDescription: '',
+        sourceHtml: html,
+        sourceTextContent: title,
+        sourceHash,
+        editedHash: sourceHash,
+        editedAt: null,
+        sourceUpdatedSinceEdit: false,
+        importedAt: new Date().toISOString()
+    };
+}
+
+async function createWebsite(importRoot, input) {
+    const name = typeof input?.name === 'string' ? input.name.trim() : '';
+    if (!name || name.length > 80) throw new Error('Enter a website name of 1 to 80 characters.');
+    const siteId = fingerprint(crypto.randomUUID() + name).slice(0, 20);
+    const websiteUrl = 'https://' + siteId + '.peanut.local/';
+    const pageId = fingerprint(websiteUrl);
+    const page = makeAuthoredPage(websiteUrl, name);
+    const siteDirectory = path.join(importRoot, siteId);
+    await fs.mkdir(siteDirectory, { recursive: false });
+    await atomicWrite(path.join(siteDirectory, pageId + '.json'), page);
+    const manifest = {
+        websiteUrl,
+        startUrl: websiteUrl,
+        name,
+        createdAt: new Date().toISOString(),
+        importedAt: new Date().toISOString(),
+        pageCount: 1,
+        sitemapCount: 0,
+        sitemapPageCount: 0,
+        assetCount: 0,
+        assetBytes: 0,
+        assets: [],
+        pages: [{ id: pageId, filename: pageId + '.json', url: websiteUrl, title: name }],
+        errors: [],
+        authored: true
+    };
+    await atomicWrite(path.join(siteDirectory, 'manifest.json'), manifest);
+    return { id: siteId, websiteUrl, pageCount: 1, pageId };
+}
+
+async function createWebsitePage(importRoot, input) {
+    if (!input || typeof input !== 'object') throw new Error('A website selection is required.');
+    validateIds(input.siteId);
+    const rawPath = typeof input.path === 'string' ? input.path.trim() : '';
+    if (!rawPath || rawPath.length > 100) throw new Error('Enter a page path of 1 to 100 characters.');
+    const segments = rawPath.replace(/^\\/+|\\/+$/g, '').split('/');
+    if (segments.some(segment => !/^[a-z0-9][a-z0-9-]{0,39}$/i.test(segment))) {
+        throw new Error('Use letters, numbers and hyphens for each page-path segment.');
+    }
+    const siteDirectory = path.join(importRoot, input.siteId);
+    const manifestPath = path.join(siteDirectory, 'manifest.json');
+    const manifest = await readJson(manifestPath);
+    if (!manifest.authored) throw new Error('New pages can only be added to websites created in Peanut Browsing.');
+    const origin = new URL(manifest.websiteUrl).origin;
+    const url = origin + '/' + segments.map(segment => segment.toLowerCase()).join('/') + '/';
+    if ((manifest.pages || []).some(page => page.url === url)) {
+        throw new Error('That page path already exists in this website.');
+    }
+    const title = segments[segments.length - 1].replace(/-/g, ' ')
+        .replace(/\\b[a-z]/g, character => character.toUpperCase());
+    const pageId = fingerprint(url);
+    const page = makeAuthoredPage(url, title);
+    await atomicWrite(path.join(siteDirectory, pageId + '.json'), page);
+    manifest.pages.push({ id: pageId, filename: pageId + '.json', url, title });
+    manifest.pageCount = manifest.pages.length;
+    await atomicWrite(manifestPath, manifest);
+    return { siteId: input.siteId, pageId, url, title, pageCount: manifest.pageCount };
+}
+
+module.exports = { listImportedSites, readImportedPage, saveImportedPage, exportImportedSite, createWebsite, createWebsitePage };
