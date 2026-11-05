@@ -10,10 +10,10 @@ test('every Library DOM lookup has a matching HTML element', async () => {
         fs.readFile(path.join(sourceDirectory, 'library.js'), 'utf8')
     ]);
     const availableIds = new Set(
-        Array.from(html.matchAll(/\\bid=["']([^"']+)["']/g), match => match[1])
+        Array.from(html.matchAll(/\bid=["']([^"']+)["']/g), match => match[1])
     );
     const requestedIds = Array.from(
-        javascript.matchAll(/document\\.getElementById\\(["']([^"']+)["']\\)/g),
+        javascript.matchAll(/document\.getElementById\(["']([^"']+)["']\)/g),
         match => match[1]
     );
     const missingIds = [...new Set(requestedIds.filter(id => !availableIds.has(id)))];
