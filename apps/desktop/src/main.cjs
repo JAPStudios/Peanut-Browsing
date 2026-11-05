@@ -3,7 +3,18 @@ const crypto = require('node:crypto');
 const fs = require('node:fs/promises');
 const fetch = require('cross-fetch');
 const { ElectronBlocker, adsAndTrackingLists } = require('@ghostery/adblocker-electron');
-const { app, BaseWindow, BrowserWindow, WebContentsView, ipcMain, Menu, session, dialog } = require('electron');
+const { app, BaseWindow, BrowserWindow, WebContentsView, ipcMain, Menu, session, dialog, protocol } = require('electron');
+
+protocol.registerSchemesAsPrivileged([{
+    scheme: 'peanut-asset',
+    privileges: {
+        standard: true,
+        secure: true,
+        supportFetchAPI: true,
+        corsEnabled: true,
+        stream: true
+    }
+}]);
 const { crawlSite } = require('./importer.cjs');
 const { listImportedSites, readImportedPage, saveImportedPage } = require('./import-library.cjs');
 const { createProfileStore, normalizeUrl } = require('./profile-store.cjs');
@@ -20,6 +31,7 @@ let protectionStatus = 'initializing';
 let profileStore = null;
 let importInProgress = false;
 let downloadStatus = 'Downloads ready';
+const assetAccessToken = crypto.randomUUID();
 let activeTabId = null;
 let nextTabId = 1;
 const tabs = new Map();
@@ -377,6 +389,39 @@ async function loadTrackingProtection() {
     publishState();
 }
 
+function registerAssetProtocol() {
+    protocol.handle('peanut-asset', async request => {
+        if (request.method !== 'GET') return new Response('', { status: 405 });
+        try {
+            const url = new URL(request.url);
+            const siteId = url.hostname;
+            const filename = decodeURIComponent(url.pathname.replace(/^\\/+/, ''));
+            if (!/^[a-f0-9]{20}$/.test(siteId) ||
+                !/^[a-f0-9]{64}\\.[a-z0-9]{1,8}$/.test(filename) ||
+                url.searchParams.get('token') !== assetAccessToken) {
+                return new Response('Not found', { status: 404 });
+            }
+
+            const siteDirectory = path.join(app.getPath('userData'), 'imports', siteId);
+            const manifest = JSON.parse(await fs.readFile(path.join(siteDirectory, 'manifest.json'), 'utf8'));
+            const asset = (manifest.assets || []).find(item => item.filename === filename);
+            if (!asset) return new Response('Not found', { status: 404 });
+
+            const bytes = await fs.readFile(path.join(siteDirectory, 'assets', filename));
+            return new Response(bytes, {
+                headers: {
+                    'Content-Type': asset.mimeType || 'application/octet-stream',
+                    'Access-Control-Allow-Origin': '*',
+                    'Cache-Control': 'no-store',
+                    'X-Content-Type-Options': 'nosniff'
+                }
+            });
+        } catch {
+            return new Response('Not found', { status: 404 });
+        }
+    });
+}
+
 function createLibraryWindow() {
     if (libraryWindow && !libraryWindow.isDestroyed()) {
         libraryWindow.focus();
@@ -453,7 +498,8 @@ function registerIpc() {
     });
     ipcMain.handle('peanut:read-imported-page', (event, input) => {
         if (!isTrustedUi(event)) throw new Error('Not authorised.');
-        return readImportedPage(importRoot(), input?.siteId, input?.pageId);
+        const page = await readImportedPage(importRoot(), input?.siteId, input?.pageId);
+        return { ...page, assetToken: assetAccessToken };
     });
     ipcMain.handle('peanut:save-imported-page', (event, input) => {
         if (!isTrustedUi(event)) throw new Error('Not authorised.');
@@ -592,6 +638,7 @@ app.whenReady().then(async () => {
     profileStore = createProfileStore(path.join(app.getPath('userData'), 'profile.json'));
     await profileStore.load();
     Menu.setApplicationMenu(null);
+    registerAssetProtocol();
     registerIpc();
     createWindow();
     if (process.env.PEANUT_CI_TEST === '1') {
