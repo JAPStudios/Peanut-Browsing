@@ -1,0 +1,52 @@
+# Production topology: authenticated Nginx gateway -> private SearXNG -> Valkey.
+# Put a TLS reverse proxy in front of the loopback-only gateway port.
+name: peanut-browsing-search
+
+services:
+  core:
+    container_name: peanut-browsing-search
+    image: docker.io/searxng/searxng:${SEARXNG_VERSION:-latest}
+    restart: unless-stopped
+    env_file:
+      - ./.env
+    volumes:
+      - ./core-config/:/etc/searxng/:Z
+      - search-cache:/var/cache/searxng/
+    depends_on:
+      - valkey
+    networks:
+      - search-backend
+
+  valkey:
+    container_name: peanut-browsing-search-cache
+    image: docker.io/valkey/valkey:9-alpine
+    command: valkey-server --save 300 1 --save 60 1000 --loglevel warning
+    restart: unless-stopped
+    volumes:
+      - valkey-cache:/data/
+    networks:
+      - search-backend
+
+  gateway:
+    container_name: peanut-browsing-search-gateway
+    image: docker.io/library/nginx:1.29-alpine
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:${PEANUT_SEARCH_GATEWAY_PORT:-8081}:8080"
+    environment:
+      PEANUT_SEARCH_API_KEY: ${PEANUT_SEARCH_API_KEY:?Set PEANUT_SEARCH_API_KEY in .env}
+      NGINX_ENVSUBST_FILTER: "^PEANUT_SEARCH_API_KEY$"
+    volumes:
+      - ./gateway/default.conf.template:/etc/nginx/templates/default.conf.template:ro
+    depends_on:
+      - core
+    networks:
+      - search-backend
+
+networks:
+  search-backend:
+    internal: true
+
+volumes:
+  search-cache:
+  valkey-cache:
