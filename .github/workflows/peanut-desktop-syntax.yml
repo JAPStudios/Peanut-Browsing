@@ -1,0 +1,26 @@
+name: Peanut Browsing desktop syntax
+
+on:
+  push:
+    paths:
+      - "apps/desktop/**"
+      - ".github/workflows/peanut-desktop-syntax.yml"
+  pull_request:
+    paths:
+      - "apps/desktop/**"
+      - ".github/workflows/peanut-desktop-syntax.yml"
+
+jobs:
+  syntax:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Check Electron main process
+        run: node --check apps/desktop/src/main.cjs
+      - name: Check preload bridge
+        run: node --check apps/desktop/src/preload.cjs
+      - name: Check renderer
+        run: node --check apps/desktop/src/renderer/app.js
