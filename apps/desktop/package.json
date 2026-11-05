@@ -44,6 +44,7 @@
   },
   "dependencies": {
     "@ghostery/adblocker-electron": "^2.20.3",
-    "cross-fetch": "^4.1.0"
+    "cross-fetch": "^4.1.0",
+    "ipaddr.js": "^2.2.0"
   }
 }
