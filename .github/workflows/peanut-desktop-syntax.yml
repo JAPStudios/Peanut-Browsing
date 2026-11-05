@@ -26,6 +26,8 @@ jobs:
         run: node --check apps/desktop/src/import-library.cjs
       - name: Check library interface
         run: node --check apps/desktop/src/library.js
+      - name: Test imported-site library
+        run: node --test apps/desktop/test/*.test.cjs
       - name: Check preload bridge
         run: node --check apps/desktop/src/preload.cjs
       - name: Check renderer
