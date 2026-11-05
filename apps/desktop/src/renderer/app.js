@@ -45,7 +45,13 @@ function render(state) {
     forwardButton.disabled = !state.canGoForward;
     reloadButton.textContent = state.loading ? '×' : '↻';
     reloadButton.setAttribute('aria-label', state.loading ? 'Stop loading' : 'Reload');
-    statusElement.textContent = state.loading ? 'Loading page…' : (active?.title || 'Peanut Browsing');
+    importButton.disabled = Boolean(active?.private);
+    importButton.title = active?.private
+        ? 'Website import is disabled in private tabs'
+        : 'Capture pages from the current website';
+    statusElement.textContent = state.loading
+        ? 'Loading page…'
+        : (active?.private ? 'Private browsing' : (active?.title || 'Peanut Browsing'));
 }
 
 document.getElementById('address-form').addEventListener('submit', event => {
@@ -56,6 +62,7 @@ document.getElementById('address-form').addEventListener('submit', event => {
     addressElement.blur();
 });
 document.getElementById('new-tab').addEventListener('click', () => api.newTab());
+document.getElementById('new-private-tab').addEventListener('click', () => api.newPrivateTab());
 document.getElementById('open-library').addEventListener('click', () => api.openLibrary());
 backButton.addEventListener('click', () => api.back());
 forwardButton.addEventListener('click', () => api.forward());
