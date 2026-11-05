@@ -280,14 +280,14 @@ insertBlockButton.addEventListener('click', async () => {
             url: blockUrlInput.value
         });
         const source = htmlInput.value;
-        const closingMain = /<\\/main\\s*>/i;
-        const closingBody = /<\\/body\\s*>/i;
+        const closingMain = /<\/main\s*>/i;
+        const closingBody = /<\/body\s*>/i;
         if (closingMain.test(source)) {
-            htmlInput.value = source.replace(closingMain, block + '\\n</main>');
+            htmlInput.value = source.replace(closingMain, block + '\n</main>');
         } else if (closingBody.test(source)) {
-            htmlInput.value = source.replace(closingBody, block + '\\n</body>');
+            htmlInput.value = source.replace(closingBody, block + '\n</body>');
         } else {
-            htmlInput.value = source + '\\n' + block + '\\n';
+            htmlInput.value = source + '\n' + block + '\n';
         }
         blockTextInput.value = '';
         updatePreview();
