@@ -1,5 +1,6 @@
 const path = require('node:path');
 const { app, BaseWindow, WebContentsView, ipcMain, Menu } = require('electron');
+const { crawlSite } = require('./importer.cjs');
 
 const TOOLBAR_HEIGHT = 104;
 const NEW_TAB_FILE = path.join(__dirname, 'newtab.html');
@@ -238,6 +239,16 @@ function registerIpc() {
     ipcMain.handle('peanut:navigate', (event, value) => {
         if (!isChrome(event)) throw new Error('Not authorised.');
         return navigateActive(value);
+    });
+    ipcMain.handle('peanut:import-site', async event => {
+        if (!isChrome(event)) throw new Error('Not authorised.');
+        const tab = activeTab();
+        if (!tab) throw new Error('No active tab is available.');
+        return crawlSite(tab.view.webContents.getURL(), progress => {
+            if (chromeView && !chromeView.webContents.isDestroyed()) {
+                chromeView.webContents.send('peanut:import-progress', progress);
+            }
+        });
     });
     ipcMain.handle('peanut:new-tab', event => {
         if (!isChrome(event)) throw new Error('Not authorised.');
