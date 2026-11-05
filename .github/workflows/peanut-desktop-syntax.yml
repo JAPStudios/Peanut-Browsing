@@ -28,6 +28,14 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Check first-party index Python syntax
+        run: python -m py_compile services/index/server.py
+      - name: Test first-party search index
+        working-directory: services/index
+        run: python -m unittest -v
       - name: Check Wix search helper syntax
         run: node --experimental-default-type=module --check src/backend/searchUtils.js
       - name: Test Wix search helper
