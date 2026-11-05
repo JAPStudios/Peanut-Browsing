@@ -36,21 +36,6 @@ export function validateSearchEndpoint(value) {
     return endpoint;
 }
 
-export function buildSearchUrl(endpointValue, query, page) {
-    const endpoint = validateSearchEndpoint(endpointValue);
-    const request = validateSearchRequest(query, page);
-    let path = endpoint.pathname;
-    while (path.endsWith('/')) path = path.slice(0, -1);
-    endpoint.pathname = path.endsWith('/search') ? path : path + '/search';
-    endpoint.search = '';
-    endpoint.searchParams.set('q', request.query);
-    endpoint.searchParams.set('format', 'json');
-    endpoint.searchParams.set('pageno', String(request.page));
-    endpoint.searchParams.set('safesearch', '1');
-    endpoint.searchParams.set('language', 'en');
-    return endpoint;
-}
-
 export function normalizeSearchResults(results) {
     if (!Array.isArray(results)) throw new Error('The search service returned an invalid results document.');
     const seen = new Set();
