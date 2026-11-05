@@ -15,7 +15,7 @@ To use a different search service, set `PEANUT_SEARCH_URL` to an HTTP or HTTPS U
 
 ## Current implementation
 
-The initial shell provides multi-tab navigation, an address/search bar, back/forward, reload/stop, persistent browser session storage, HTTP/HTTPS navigation, plus an isolated local browser-chrome renderer. Remote pages do not receive Node.js integration or the privileged preload bridge.
+The initial shell provides multi-tab navigation, an address/search bar, back/forward, reload/stop, persistent browser session storage, ephemeral private tabs, HTTP/HTTPS navigation, plus an isolated local browser-chrome renderer. Private tabs use a separate in-memory session; their cookies, cache, authentication data and site storage are cleared when the tab closes. Private mode does not conceal the network address or prevent websites from using browser fingerprinting. Remote pages do not receive Node.js integration or the privileged preload bridge.
 
 The **Import site** control crawls same-origin links from the active page, captures page titles, descriptions, HTML and visible text, then writes a manifest plus individual page records under Electron's application data directory. It currently caps a run at 250 attempted pages. The **Library** control lists imported websites, opens captured pages, then saves edits to page titles, descriptions, HTML source or extracted text. Imported markup is retained as source data, not executed as a local page.
 
