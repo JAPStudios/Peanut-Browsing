@@ -223,6 +223,31 @@ def tokenize_query(query: str) -> list[str]:
     return re.findall(r"[\w]{2,}", query.casefold(), flags=re.UNICODE)[:12]
 
 
+def build_fts_query(query: str) -> str:
+    """Build a parameter-safe FTS5 expression with AND terms and quoted phrases."""
+    if not isinstance(query, str) or len(query) > 200:
+        raise ValueError("Search phrases must contain between 1 and 200 characters.")
+    parts = []
+    token_count = 0
+    for match in re.finditer(r'"([^"]+)"|([^"]+)', query):
+        phrase, plain = match.group(1), match.group(2)
+        if phrase is not None:
+            tokens = re.findall(r"[\w]{2,}", phrase.casefold(), flags=re.UNICODE)
+            if tokens:
+                token_count += len(tokens)
+                parts.append('"' + " ".join(tokens) + '"')
+        else:
+            tokens = re.findall(r"[\w]{2,}", plain.casefold(), flags=re.UNICODE)
+            for token in tokens:
+                token_count += 1
+                parts.append('"' + token.replace('"', '""') + '"')
+        if token_count >= 12:
+            break
+    if not parts:
+        raise ValueError("Enter at least one search term containing two or more characters.")
+    return " AND ".join(parts[:12])
+
+
 class IndexStore:
     def __init__(self, path: str):
         self.path = path
@@ -262,10 +287,7 @@ class IndexStore:
     def search(self, query: str, limit: int = DEFAULT_SEARCH_LIMIT, offset: int = 0):
         if not isinstance(query, str) or len(query) > 200:
             raise ValueError("Search phrases must contain between 1 and 200 characters.")
-        tokens = tokenize_query(query)
-        if not tokens:
-            raise ValueError("Enter at least one search term containing two or more characters.")
-        safe_query = " OR ".join('"' + token.replace('"', '""') + '"' for token in tokens)
+        safe_query = build_fts_query(query)
         with self.connect() as connection:
             total = connection.execute(
                 "SELECT COUNT(*) FROM page_index WHERE page_index MATCH ?", (safe_query,)
