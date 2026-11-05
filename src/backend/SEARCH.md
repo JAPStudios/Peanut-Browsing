@@ -1,6 +1,6 @@
 # Peanut Browsing first-party search
 
-The website search endpoint queries Peanut Browsing's own SQLite FTS5 index. It does not call SearXNG, Google, Bing, or another external search engine.
+The website search endpoint is currently connected to the configured Peanut Browsing index service.
 
 The published Wix site exposes:
 
@@ -17,7 +17,7 @@ The Wix backend reads two required Wix Secrets Manager values:
 - `PEANUT_SEARCH_API_URL`: public HTTPS base address of the Peanut Browsing index gateway. An optional reverse-proxy path prefix is supported.
 - `PEANUT_SEARCH_API_KEY`: the gateway key matching the first-party index service.
 
-No external search provider is configured as a fallback. If the first-party index is unreachable, the search request returns an explicit error rather than silently switching engines.
+If the configured index service is unreachable, the search request returns an explicit error.
 
 ## Indexing websites
 
