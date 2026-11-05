@@ -16,6 +16,7 @@ import re
 import socket
 import sqlite3
 import time
+import xml.etree.ElementTree as ET
 from collections import deque
 from html.parser import HTMLParser
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -29,6 +30,8 @@ MAX_BODY_BYTES = 2 * 1024 * 1024
 MAX_TEXT_CHARS = 100_000
 DEFAULT_CRAWL_PAGES = 10
 MAX_CRAWL_PAGES = 25
+MAX_SITEMAP_FILES = 10
+MAX_SITEMAP_URLS = 1000
 DEFAULT_SEARCH_LIMIT = 20
 MAX_SEARCH_LIMIT = 50
 DATABASE_PATH = os.environ.get("INDEX_DB_PATH", "/data/index.sqlite")
@@ -225,13 +228,79 @@ def read_robots(origin: str):
     return parser
 
 
+def parse_sitemap_document(payload: bytes) -> tuple[str, list[str]]:
+    """Return (index|urlset, loc values) from a bounded XML sitemap."""
+    try:
+        root = ET.fromstring(payload)
+    except ET.ParseError as error:
+        raise ValueError("A sitemap contained invalid XML.") from error
+    kind = root.tag.rsplit("}", 1)[-1].lower()
+    if kind not in ("sitemapindex", "urlset"):
+        raise ValueError("The XML document is not a supported sitemap.")
+    locations = []
+    for element in root.iter():
+        if element.tag.rsplit("}", 1)[-1].lower() == "loc" and element.text:
+            value = element.text.strip()
+            if value and len(value) <= 2048:
+                locations.append(value)
+    return ("index" if kind == "sitemapindex" else "urlset"), locations
+
+
+def discover_sitemap_urls(origin: str, robots) -> tuple[list[str], int]:
+    """Read same-origin sitemap declarations and nested sitemap indexes."""
+    declared = robots.site_maps() or [urljoin(origin, "/sitemap.xml")]
+    pending = deque(declared[:MAX_SITEMAP_FILES])
+    seen_sitemaps = set()
+    page_urls = []
+    seen_pages = set()
+    read_count = 0
+
+    while pending and read_count < MAX_SITEMAP_FILES and len(page_urls) < MAX_SITEMAP_URLS:
+        candidate = pending.popleft()
+        try:
+            sitemap_url = urldefrag(validate_public_url(urljoin(origin, candidate)))[0]
+        except ValueError:
+            continue
+        if not same_origin(origin, sitemap_url) or sitemap_url in seen_sitemaps:
+            continue
+        seen_sitemaps.add(sitemap_url)
+        try:
+            payload, final_url, content_type = fetch_bytes(sitemap_url, timeout=8)
+            if not same_origin(origin, final_url):
+                continue
+            kind, locations = parse_sitemap_document(payload)
+        except (HTTPError, URLError, OSError, ValueError):
+            continue
+        read_count += 1
+        for location in locations:
+            try:
+                target = urldefrag(validate_public_url(urljoin(final_url, location)))[0]
+            except ValueError:
+                continue
+            if not same_origin(origin, target):
+                continue
+            if kind == "index":
+                if target not in seen_sitemaps and len(pending) < MAX_SITEMAP_FILES:
+                    pending.append(target)
+            elif target not in seen_pages and len(page_urls) < MAX_SITEMAP_URLS:
+                seen_pages.add(target)
+                page_urls.append(target)
+
+    return page_urls, read_count
+
+
 def crawl_site(seed_url: str, max_pages: int, store: IndexStore):
     seed = validate_public_url(seed_url, resolve=True)
     origin_parts = urlsplit(seed)
     origin = urlunsplit((origin_parts.scheme, origin_parts.netloc, "/", "", ""))
     robots = read_robots(origin)
+    sitemap_urls, sitemaps_read = discover_sitemap_urls(origin, robots)
     queue = deque([seed])
     queued = {seed}
+    for sitemap_url in sitemap_urls:
+        if sitemap_url not in queued:
+            queued.add(sitemap_url)
+            queue.append(sitemap_url)
     indexed = 0
     visited = 0
     crawl_delay = robots.crawl_delay(USER_AGENT) or robots.crawl_delay("*") or 0.5
@@ -265,7 +334,7 @@ def crawl_site(seed_url: str, max_pages: int, store: IndexStore):
         if queue and visited < max_pages:
             time.sleep(delay)
 
-    return {"visited": visited, "indexed": indexed, "remaining": len(queue)}
+    return {"visited": visited, "indexed": indexed, "remaining": len(queue),\n            "sitemapsRead": sitemaps_read, "sitemapPagesDiscovered": len(sitemap_urls)}
 
 
 class SearchHandler(BaseHTTPRequestHandler):
