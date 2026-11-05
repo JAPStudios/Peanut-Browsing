@@ -358,11 +358,11 @@ function escapeHtmlText(value) {
 
 function makeAuthoredPage(url, title) {
     const safeTitle = escapeHtmlText(title);
-    const html = '<!doctype html>\\n<html lang="en">\\n<head>\\n  <meta charset="utf-8">\\n' +
-        '  <meta name="viewport" content="width=device-width, initial-scale=1">\\n' +
-        '  <title>' + safeTitle + '</title>\\n</head>\\n<body>\\n  <main>\\n    <h1>' +
-        safeTitle + '</h1>\\n    <p>Edit this page in Peanut Browsing.</p>\\n  </main>\\n</body>\\n</html>\\n';
-    const sourceHash = fingerprint([title, '', html, title].join('\\n'));
+    const html = '<!doctype html>\n<html lang="en">\n<head>\n  <meta charset="utf-8">\n' +
+        '  <meta name="viewport" content="width=device-width, initial-scale=1">\n' +
+        '  <title>' + safeTitle + '</title>\n</head>\n<body>\n  <main>\n    <h1>' +
+        safeTitle + '</h1>\n    <p>Edit this page in Peanut Browsing.</p>\n  </main>\n</body>\n</html>\n';
+    const sourceHash = fingerprint([title, '', html, title].join('\n'));
     return {
         url,
         title,
