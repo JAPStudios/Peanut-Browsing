@@ -4,6 +4,10 @@ import { buildSearchServiceUrl, normalizeSearchResults, normalizeTotalResults, v
 
 test('normalizes search phrases and validates page numbers', () => {
     assert.deepEqual(validateSearchRequest('  peanut   browsing ', 2), { query: 'peanut browsing', page: 2 });
+    assert.deepEqual(validateSearchRequest('peanut', '2'), { query: 'peanut', page: 2 });
+    for (const invalidPage of ['1e1', '0x10', '01', '1.5', '2junk', '', null, [], {}]) {
+        assert.throws(() => validateSearchRequest('peanut', invalidPage), /outside the supported range/);
+    }
     assert.throws(() => validateSearchRequest('   ', 1), /between 1 and 200 characters/);
     assert.throws(() => validateSearchRequest('peanut', 0), /outside the supported range/);
     assert.throws(() => validateSearchRequest('peanut', 21), /outside the supported range/);
