@@ -1,75 +1,71 @@
 import { fetch } from 'wix-fetch';
 import { secrets } from 'wix-secrets-backend.v2';
 import { elevate } from 'wix-auth';
-import { buildSearchUrl, normalizeSearchResults, validateSearchRequest } from 'backend/searchUtils';
+import { normalizeSearchResults, validateSearchEndpoint, validateSearchRequest } from 'backend/searchUtils';
 
 const elevatedGetSecretValue = elevate(secrets.getSecretValue);
 const SEARCH_ENDPOINT_SECRET = 'PEANUT_SEARCH_API_URL';
 const SEARCH_API_KEY_SECRET = 'PEANUT_SEARCH_API_KEY';
 
-async function readSecret(name, required) {
+async function readSecret(name) {
     try {
         const value = await elevatedGetSecretValue(name);
         if (typeof value === 'string' && value.trim()) return value.trim();
         if (value && typeof value.value === 'string' && value.value.trim()) return value.value.trim();
     } catch (error) {
-        if (required) throw new Error('Peanut Browsing search is not connected to a search service yet.');
+        throw new Error('Peanut Browsing first-party search is not connected yet.');
     }
-    if (required) throw new Error('Peanut Browsing search is not connected to a search service yet.');
-    return '';
+    throw new Error('Peanut Browsing first-party search is not connected yet.');
 }
 
-/** Searches the configured SearXNG service without exposing provider configuration to visitors. */
+/** Queries only Peanut Browsing's own index. No external search engines are called. */
 export async function searchWeb(query, page) {
     const request = validateSearchRequest(query, page);
-    const endpoint = await readSecret(SEARCH_ENDPOINT_SECRET, true);
-    const apiKey = await readSecret(SEARCH_API_KEY_SECRET, true);
-    const url = buildSearchUrl(endpoint, request.query, request.page);
-    const headers = { Accept: 'application/json', 'X-API-Key': apiKey };
-    const indexUrl = new URL('/index/search', endpoint.origin);
-    indexUrl.searchParams.set('q', request.query);
-    indexUrl.searchParams.set('limit', '20');
-    indexUrl.searchParams.set('offset', String((request.page - 1) * 20));
+    const endpoint = validateSearchEndpoint(await readSecret(SEARCH_ENDPOINT_SECRET));
+    const apiKey = await readSecret(SEARCH_API_KEY_SECRET);
+    const url = new URL('/index/search', endpoint.origin);
+    url.searchParams.set('q', request.query);
+    url.searchParams.set('limit', '20');
+    url.searchParams.set('offset', String((request.page - 1) * 20));
 
     let response;
     try {
-        response = await fetch(url.href, { method: 'get', headers });
+        response = await fetch(url.href, {
+            method: 'get',
+            headers: { Accept: 'application/json', 'X-API-Key': apiKey }
+        });
     } catch (error) {
-        throw new Error('Peanut Browsing could not reach its search service. Try again shortly.');
+        throw new Error('Peanut Browsing could not reach its first-party index. Try again shortly.');
     }
-    if (!response.ok) throw new Error('The Peanut Browsing search service returned HTTP ' + response.status + '.');
+    if (!response.ok) {
+        throw new Error('Peanut Browsing first-party index returned HTTP ' + response.status + '.');
+    }
 
     let payload;
-    try { payload = await response.json(); } catch (error) {
-        throw new Error('The Peanut Browsing search service returned unreadable data.');
-    }
-    let indexedResults = [];
     try {
-        const indexResponse = await fetch(indexUrl.href, { method: 'get', headers });
-        if (indexResponse.ok) {
-            const indexPayload = await indexResponse.json();
-            if (indexPayload && Array.isArray(indexPayload.results)) {
-                indexedResults = indexPayload.results.map(result => ({
-                    ...result,
-                    content: typeof result.snippet === 'string' ? result.snippet : ''
-                }));
-            }
-        }
+        payload = await response.json();
     } catch (error) {
-        // Metasearch remains available if the first-party index is temporarily offline.
+        throw new Error('Peanut Browsing first-party index returned unreadable data.');
+    }
+    if (!payload || payload.status !== 'ok' || !Array.isArray(payload.results)) {
+        throw new Error('Peanut Browsing first-party index returned an invalid results document.');
     }
 
-    const results = normalizeSearchResults(indexedResults.concat(payload.results));
-    const reportedCount = Number(payload.number_of_results);
-    const totalResults = Number.isFinite(reportedCount) && reportedCount >= 0 ? reportedCount : null;
+    const results = normalizeSearchResults(payload.results.map(result => ({
+        ...result,
+        content: typeof result.snippet === 'string' ? result.snippet : ''
+    })));
+    const total = Number(payload.totalResults);
+    const totalResults = Number.isFinite(total) && total >= 0 ? total : null;
     return {
         status: 'ok',
         query: request.query,
         page: request.page,
         results,
         resultCount: results.length,
-        indexedResultCount: indexedResults.length,
-        totalResults: indexedResults.length ? null : totalResults,
-        hasNextPage: results.length >= 20
+        totalResults,
+        hasNextPage: totalResults === null
+            ? results.length === 20
+            : (request.page * 20) < totalResults
     };
 }
