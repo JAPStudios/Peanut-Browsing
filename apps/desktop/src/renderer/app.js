@@ -5,6 +5,7 @@ const statusElement = document.getElementById('page-status');
 const backButton = document.getElementById('back');
 const forwardButton = document.getElementById('forward');
 const reloadButton = document.getElementById('reload');
+const importButton = document.getElementById('import-site');
 let latestState = null;
 
 function makeTab(tab, activeTabId) {
@@ -60,6 +61,23 @@ forwardButton.addEventListener('click', () => api.forward());
 reloadButton.addEventListener('click', () => {
     if (latestState?.loading) api.stop();
     else api.reload();
+});
+importButton.addEventListener('click', async () => {
+    importButton.disabled = true;
+    statusElement.textContent = 'Preparing website import…';
+    try {
+        const result = await api.importSite();
+        statusElement.textContent = 'Imported ' + result.pageCount + ' pages from ' + result.websiteUrl;
+    } catch (error) {
+        statusElement.textContent = error.message || 'Website import failed.';
+    } finally {
+        importButton.disabled = false;
+    }
+});
+api.onImportProgress(progress => {
+    if (progress.status === 'importing') {
+        statusElement.textContent = 'Importing page ' + progress.completed + ' of up to ' + progress.limit;
+    }
 });
 addressElement.addEventListener('focus', () => addressElement.select());
 api.onFocusAddress(() => {
