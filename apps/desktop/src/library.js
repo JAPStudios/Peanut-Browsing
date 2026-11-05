@@ -31,12 +31,12 @@ function updatePreview() {
     }
 
     let source = htmlInput.value;
-    source = source.replace(/<script\\b[^>]*>[\\s\\S]*?<\\/script\\s*>/gi, '');
-    source = source.replace(/<meta\\b[^>]*http-equiv\\s*=\\s*["']?refresh["']?[^>]*>/gi, '');
+    source = source.replace(/<script\b[^>]*>[\s\S]*?<\/script\s*>/gi, '');
+    source = source.replace(/<meta\b[^>]*http-equiv\s*=\s*["']?refresh["']?[^>]*>/gi, '');
     const policy = '<meta http-equiv="Content-Security-Policy" content="default-src \'none\'; img-src https: data:; style-src https: \'unsafe-inline\'; font-src https: data:; media-src https:; connect-src \'none\'; object-src \'none\'; frame-src \'none\'; form-action \'none\'; base-uri https:">';
     const base = '<base href="' + baseUrl + '">';
-    if (/<head\\b[^>]*>/i.test(source)) {
-        source = source.replace(/<head\\b[^>]*>/i, match => match + policy + base);
+    if (/<head\b[^>]*>/i.test(source)) {
+        source = source.replace(/<head\b[^>]*>/i, match => match + policy + base);
     } else {
         source = '<head>' + policy + base + '</head>' + source;
     }
