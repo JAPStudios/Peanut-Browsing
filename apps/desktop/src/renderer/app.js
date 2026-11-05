@@ -55,7 +55,8 @@ function render(state) {
     importButton.title = canImportWebsite
         ? 'Capture pages from the current website'
         : 'Open a public website before importing it';
-    bookmarkButton.disabled = Boolean(!active || active.private || !/^https?:\/\//i.test(active.url));
+    bookmarkButton.disabled = Boolean(!active || active.private ||
+        !(/^https?:\/\//i.test(active.url) || /^peanut-site:\/\/[a-f0-9]{20}\//i.test(active.url)));
     bookmarkButton.textContent = state.isBookmarked ? '★' : '☆';
     bookmarkButton.title = state.isBookmarked ? 'Remove bookmark' : 'Bookmark this page';
     statusElement.textContent = state.loading
