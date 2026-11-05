@@ -6,7 +6,7 @@ This is Peanut Browsing's own searchable page index. Search uses SQLite FTS5 wit
 
 - Discover sitemap declarations in `robots.txt`, follow nested same-origin sitemap indexes, then crawl explicitly submitted public websites.\n- Stay on each submitted website's origin during sitemap discovery and page crawling.
 - Read and obey `robots.txt`; stop if the robots policy cannot be checked.
-- Reject local, private, loopback, reserved, credential-bearing, and non-HTTP(S) targets.
+- Reject local, private, loopback, reserved, credential-bearing, and non-HTTP(S) targets.\n- Pin each outbound connection to a DNS address that was checked as globally routable, preventing a hostname from changing to a private address between validation and connection.
 - Limit each crawl to 25 pages, 2 MiB per page, plus bounded extracted text.
 - Store page titles, URLs, and page text in SQLite FTS5.
 - Rank matching pages using SQLite's BM25 implementation.
