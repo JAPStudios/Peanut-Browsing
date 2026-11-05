@@ -21,6 +21,11 @@ searchForm.addEventListener('submit', event => {
         searchInput.reportValidity();
         return;
     }
+    if (!/[\\p{L}\\p{N}_]{2,}/u.test(query)) {
+        searchInput.setCustomValidity('Enter at least one search term containing two or more characters.');
+        searchInput.reportValidity();
+        return;
+    }
     searchInput.setCustomValidity('');
     window.location.href = 'peanut-search://results/?q=' + encodeURIComponent(query) + '&page=1';
 });
