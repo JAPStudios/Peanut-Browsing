@@ -2,7 +2,7 @@ const crypto = require('node:crypto');
 const fs = require('node:fs/promises');
 const path = require('node:path');
 const { app, BrowserWindow } = require('electron');
-const { normalizeHttpUrl, decodeXml, extractSitemapLocations } = require('./sitemap-utils.cjs');
+const { normalizeHttpUrl, decodeXml, extractSitemapLocations, assertPublicHostname } = require('./sitemap-utils.cjs');
 
 const MAX_PAGES = 250;
 const MAX_HTML_CHARS = 350000;
@@ -248,6 +248,7 @@ async function writePage(directory, page) {
 async function crawlSite(startAddress, onProgress = () => {}) {
     const start = normalizeHttpUrl(startAddress);
     if (!start) throw new Error('Open a public HTTP or HTTPS website before starting an import.');
+    await assertPublicHostname(start.hostname);
 
     const origin = start.origin;
     const domainDirectory = fingerprint(origin).slice(0, 20);
