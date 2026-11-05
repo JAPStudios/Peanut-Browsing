@@ -334,7 +334,8 @@ def crawl_site(seed_url: str, max_pages: int, store: IndexStore):
         if queue and visited < max_pages:
             time.sleep(delay)
 
-    return {"visited": visited, "indexed": indexed, "remaining": len(queue),\n            "sitemapsRead": sitemaps_read, "sitemapPagesDiscovered": len(sitemap_urls)}
+    return {"visited": visited, "indexed": indexed, "remaining": len(queue),
+            "sitemapsRead": sitemaps_read, "sitemapPagesDiscovered": len(sitemap_urls)}
 
 
 class SearchHandler(BaseHTTPRequestHandler):
