@@ -70,6 +70,8 @@ test('parses only valid internal search-page navigation requests', () => {
         'peanut-search://other/?q=peanut',
         'peanut-search://results/?q=&page=1',
         'peanut-search://results/?q=peanut&page=21',
+        'peanut-search://results/?q=peanut&page=1e1',
+        'peanut-search://results/?q=' + 'x'.repeat(201),
         'peanut-search://results/?q=peanut&page=1&page=2',
         'peanut-search://results/?q=peanut&q=other&page=1'
     ]) {
