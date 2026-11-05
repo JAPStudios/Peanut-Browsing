@@ -32,6 +32,8 @@ jobs:
         run: node --check apps/desktop/src/profile-store.cjs
       - name: Check sitemap utilities
         run: node --check apps/desktop/src/sitemap-utils.cjs
+      - name: Check page version merger
+        run: node --check apps/desktop/src/page-record.cjs
       - name: Check library interface
         run: node --check apps/desktop/src/library.js
       - name: Resolve desktop dependencies
