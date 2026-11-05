@@ -59,7 +59,7 @@ function parseSearchNavigation(value) {
         const pages = url.searchParams.getAll('page');
         if (queries.length !== 1 || pages.length > 1) return null;
         const query = queries[0].trim().replace(/\s+/g, ' ');
-        if (pages.length && !/^[1-9]\\d*$/.test(pages[0])) return null;
+        if (pages.length && !/^[1-9]\d*$/.test(pages[0])) return null;
         const page = pages.length ? Number(pages[0]) : 1;
         if (!query || query.length > 200 || !Number.isInteger(page) || page < 1 || page > 20) return null;
         return { query, page };
