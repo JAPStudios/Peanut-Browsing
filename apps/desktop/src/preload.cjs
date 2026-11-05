@@ -3,6 +3,7 @@ const { contextBridge, ipcRenderer } = require('electron');
 contextBridge.exposeInMainWorld('peanutBrowser', {
     navigate: value => ipcRenderer.invoke('peanut:navigate', value),
     importSite: () => ipcRenderer.invoke('peanut:import-site'),
+    importSites: addresses => ipcRenderer.invoke('peanut:import-sites', addresses),
     openLibrary: () => ipcRenderer.invoke('peanut:open-library'),
     toggleBookmark: () => ipcRenderer.invoke('peanut:toggle-bookmark'),
     listProfile: () => ipcRenderer.invoke('peanut:list-profile'),
