@@ -1,22 +1,8 @@
-# Production topology: authenticated Nginx gateway -> private SearXNG -> Valkey.
+# Peanut Browsing first-party index behind an authenticated Nginx gateway.
 # Put a TLS reverse proxy in front of the loopback-only gateway port.
 name: peanut-browsing-search
 
 services:
-  core:
-    container_name: peanut-browsing-search
-    image: docker.io/searxng/searxng:${SEARXNG_VERSION:-latest}
-    restart: unless-stopped
-    env_file:
-      - ./.env
-    volumes:
-      - ./core-config/:/etc/searxng/:Z
-      - search-cache:/var/cache/searxng/
-    depends_on:
-      - valkey
-    networks:
-      - search-backend
-
   index:
     container_name: peanut-browsing-first-party-index
     build:
@@ -36,16 +22,6 @@ services:
       retries: 3
       start_period: 5s
 
-  valkey:
-    container_name: peanut-browsing-search-cache
-    image: docker.io/valkey/valkey:9-alpine
-    command: valkey-server --save 300 1 --save 60 1000 --loglevel warning
-    restart: unless-stopped
-    volumes:
-      - valkey-cache:/data/
-    networks:
-      - search-backend
-
   gateway:
     container_name: peanut-browsing-search-gateway
     image: docker.io/library/nginx:1.29-alpine
@@ -58,8 +34,8 @@ services:
     volumes:
       - ./gateway/default.conf.template:/etc/nginx/templates/default.conf.template:ro
     depends_on:
-      - core
-      - index
+      index:
+        condition: service_healthy
     networks:
       - search-backend
 
@@ -68,6 +44,4 @@ networks:
     driver: bridge
 
 volumes:
-  search-cache:
-  valkey-cache:
   index-data:
