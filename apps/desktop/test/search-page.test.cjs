@@ -78,3 +78,16 @@ test('parses only valid internal search-page navigation requests', () => {
         assert.equal(parseSearchNavigation(value), null);
     }
 });
+
+test('new-tab page submits searches to Peanut Browsing internal search navigation', () => {
+    const fs = require('node:fs');
+    const path = require('node:path');
+    const html = fs.readFileSync(path.join(__dirname, '../src/newtab.html'), 'utf8');
+    assert.match(html, /<form[^>]+action="peanut-search:\/\/results\/"[^>]+method="get"/);
+    assert.match(html, /<input[^>]+name="q"[^>]+maxlength="200"/);
+    const { parseSearchNavigation } = require('../src/search-page.cjs');
+    assert.deepEqual(
+        parseSearchNavigation('peanut-search://results/?q=' + encodeURIComponent('independent websites')),
+        { query: 'independent websites', page: 1 }
+    );
+});
