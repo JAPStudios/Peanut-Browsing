@@ -8,6 +8,7 @@ Peanut Browsing desktop uses the following third-party components:
 | electron-builder | 26.x | MIT | Desktop packaging |
 | @ghostery/adblocker-electron | 2.20.x | MPL-2.0 | Network request filtering for ads and trackers |
 | cross-fetch | 4.x | MIT | Fetch implementation used to obtain filter lists |
+| ipaddr.js | 2.x | MIT | Public/private IP range classification for website-import safety |
 
 The ad/tracker engine loads EasyList, EasyPrivacy and uBlock Origin filter subscriptions through the Ghostery adblocker package. The current integration enables network filtering; cosmetic page-element removal is disabled. Filter-list content remains subject to its own upstream terms.
 
@@ -18,3 +19,4 @@ Upstream notices:
 - https://github.com/electron-userland/electron-builder
 - https://github.com/ghostery/adblocker
 - https://github.com/lquixada/cross-fetch
+- https://github.com/whitequark/ipaddr.js
