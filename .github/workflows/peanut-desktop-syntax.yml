@@ -32,7 +32,18 @@ jobs:
         run: node --check apps/desktop/src/renderer/app.js
       - name: Resolve desktop dependencies
         working-directory: apps/desktop
-        run: npm install --ignore-scripts --package-lock=false --no-audit --no-fund
+        run: npm install --package-lock=false --no-audit --no-fund
+      - name: Verify Electron runtime
+        working-directory: apps/desktop
+        run: npx electron --version
+      - name: Smoke-test desktop startup
+        working-directory: apps/desktop
+        run: |
+          set +e
+          xvfb-run -a timeout 15s npx electron .
+          status=$?
+          if [ "$status" -eq 124 ]; then exit 0; fi
+          exit "$status"
       - name: Prepare example search environment
         run: cp services/search/.env.example services/search/.env
       - name: Validate search service Compose configuration
