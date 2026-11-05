@@ -216,6 +216,8 @@ def read_robots(origin: str):
     parser.set_url(robots_url)
     try:
         body, final_url, content_type = fetch_bytes(robots_url, timeout=5)
+        if not same_origin(origin, final_url):
+            raise ValueError("robots.txt redirected outside the submitted website; crawling stopped.")
         parser.set_url(final_url)
         parser.parse(body.decode("utf-8", errors="replace").splitlines())
     except HTTPError as error:
