@@ -53,3 +53,19 @@ jobs:
         run: cp services/search/.env.example services/search/.env
       - name: Validate search service Compose configuration
         run: docker compose -f services/search/docker-compose.yml config --quiet
+
+      - name: Start SearXNG search service
+        run: docker compose -f services/search/docker-compose.yml up -d
+      - name: Smoke-test SearXNG JSON search
+        run: |
+          for attempt in $(seq 1 60); do
+            if curl --fail --silent http://127.0.0.1:8080/ >/dev/null; then
+              break
+            fi
+            sleep 2
+          done
+          curl --fail --silent --show-error "http://127.0.0.1:8080/search?q=peanut&format=json" -o /tmp/peanut-search.json
+          node -e "const data = require('/tmp/peanut-search.json'); if (!Array.isArray(data.results)) process.exit(1);"
+      - name: Stop SearXNG search service
+        if: always()
+        run: docker compose -f services/search/docker-compose.yml down -v
