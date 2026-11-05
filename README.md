@@ -10,7 +10,7 @@ This repository contains Peanut Browsing's Wix/Velo website code, a separate des
 - `services/search/`: authenticated Nginx gateway for the first-party index.
 - `.github/workflows/peanut-desktop-syntax.yml`: source checks, tests, container build, and production gateway configuration validation.
 
-The website search adapter queries only the first-party Peanut Browsing index. It does not forward queries to SearXNG, Google, Bing, or another external search engine. The desktop results page supports bounded previous/next pagination and renders backend errors explicitly. The crawler currently indexes explicitly submitted public websites, follows links within each submitted website, and obeys `robots.txt`. It is not yet a continuously discovered web-scale index of the public internet.
+The website search adapter currently calls the configured Peanut Browsing index service. The desktop results page supports bounded previous/next pagination and renders backend errors explicitly. The crawler currently indexes explicitly submitted public websites, follows links within each submitted website, and obeys `robots.txt`. It is not yet a continuously discovered web-scale index of the public internet.
 
 ## Wix site development
 
