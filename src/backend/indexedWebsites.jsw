@@ -1,7 +1,7 @@
 import { fetch } from 'wix-fetch';
 import { secrets } from 'wix-secrets-backend.v2';
 import { elevate } from 'wix-auth';
-import { validateSearchEndpoint } from 'backend/searchUtils';
+import { validatePublicWebsiteUrl, validateSearchEndpoint } from 'backend/searchUtils';
 
 const elevatedGetSecretValue = elevate(secrets.getSecretValue);
 
@@ -17,25 +17,7 @@ async function readRequiredSecret(name) {
 }
 
 function validateSeedWebsite(value) {
-    if (typeof value !== 'string' || value.length > 2048) {
-        throw new Error('Enter a valid public website address.');
-    }
-    let url;
-    try {
-        url = new URL(value.trim());
-    } catch (error) {
-        throw new Error('Enter a valid public website address.');
-    }
-    const hostname = url.hostname.toLowerCase();
-    if (!['http:', 'https:'].includes(url.protocol) || !hostname ||
-        url.username || url.password || hostname === 'localhost' ||
-        hostname.endsWith('.localhost') || hostname.endsWith('.local') ||
-        hostname.endsWith('.internal') || hostname.endsWith('.test') ||
-        hostname.endsWith('.invalid') || hostname.includes(':')) {
-        throw new Error('Only public HTTP or HTTPS websites can be added to the Peanut Index.');
-    }
-    url.hash = '';
-    return url.href;
+    return validatePublicWebsiteUrl(value);
 }
 
 /** Adds a bounded, robots.txt-compliant crawl of a public website to the first-party index. */
