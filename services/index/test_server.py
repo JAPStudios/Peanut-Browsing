@@ -40,10 +40,6 @@ class PublicConnectionTests(unittest.TestCase):
                 socket_factory.assert_not_called()
 
 
-if __name__ == "__main__":
-    unittest.main()
-
-
 class FirstPartySearchTests(unittest.TestCase):
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
@@ -60,6 +56,13 @@ class FirstPartySearchTests(unittest.TestCase):
         self.assertEqual(result["totalResults"], 1)
         self.assertEqual(result["results"][0]["url"], "https://peanut.example/browser")
 
+    def test_or_operator_matches_either_search_group(self):
+        store = self.store
+        store.upsert("https://peanut.example/peanut", "Peanut guide", "Peanut information")
+        store.upsert("https://peanut.example/browser", "Browser guide", "Browser information")
+        result = store.search("peanut OR browser")
+        self.assertEqual(result["totalResults"], 2)
+
     def test_quoted_phrase_is_matched_as_a_phrase(self):
         store = self.store
         store.upsert("https://peanut.example/exact", "Peanut Browsing", "Create independent websites")
@@ -70,7 +73,9 @@ class FirstPartySearchTests(unittest.TestCase):
 
     def test_search_terms_are_quoted_before_fts_execution(self):
         expression = build_fts_query('peanut "browser search" OR index')
-        self.assertEqual(expression, '"peanut" AND "browser search" AND "or" AND "index"')
+        self.assertEqual(expression, '"peanut" AND "browser search" OR "index"')
+        self.assertEqual(build_fts_query("peanut OR browser"), '"peanut" OR "browser"')
+        self.assertEqual(build_fts_query('"peanut OR browser"'), '"peanut or browser"')
 
     def test_rejects_queries_without_searchable_terms(self):
         store = self.store
@@ -86,3 +91,7 @@ class FirstPartySearchTests(unittest.TestCase):
         kind, locations = parse_sitemap_document(payload)
         self.assertEqual(kind, "urlset")
         self.assertEqual(locations, ["https://example.org/one", "https://example.org/two"])
+
+
+if __name__ == "__main__":
+    unittest.main()
