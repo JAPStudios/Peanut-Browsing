@@ -17,9 +17,11 @@ test('accepts only valid internal authored-website addresses', () => {
         'peanut-site://' + siteId + '/about/team/'
     );
     assert.equal(safeBrowserUrl('https://example.org/'), 'https://example.org/');
+    assert.equal(safeBrowserUrl('peanut-site://' + siteId + '/search/?q=peanut'),
+        'peanut-site://' + siteId + '/search/?q=peanut');
     for (const value of [
         'peanut-site://invalid/about/',
-        'peanut-site://0123456789abcdefabcd/?q=blocked',
+        'peanut-site://0123456789abcdefabcd/?q=' + 'x'.repeat(2050),
         'peanut-site://user@0123456789abcdefabcd/',
         'peanut-asset://0123456789abcdefabcd/image.png',
         'javascript:alert(1)'
