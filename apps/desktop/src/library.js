@@ -24,6 +24,11 @@ const newSiteNameInput = document.getElementById('new-site-name');
 const createSiteButton = document.getElementById('create-site');
 const newPagePathInput = document.getElementById('new-page-path');
 const createPageButton = document.getElementById('create-page');
+const blockTypeInput = document.getElementById('block-type');
+const blockTextInput = document.getElementById('block-text');
+const blockUrlInput = document.getElementById('block-url');
+const blockUrlLabel = document.getElementById('block-url-label');
+const insertBlockButton = document.getElementById('insert-block');
 
 let sites = [];
 let profile = { bookmarks: [], history: [] };
@@ -258,6 +263,44 @@ editor.addEventListener('submit', async event => {
 });
 
 htmlInput.addEventListener('input', updatePreview);
+
+function updateBlockControls() {
+    const needsUrl = blockTypeInput.value === 'link';
+    blockUrlInput.hidden = !needsUrl;
+    blockUrlLabel.hidden = !needsUrl;
+}
+
+blockTypeInput.addEventListener('change', updateBlockControls);
+insertBlockButton.addEventListener('click', async () => {
+    insertBlockButton.disabled = true;
+    try {
+        const block = await api.createContentBlock({
+            type: blockTypeInput.value,
+            text: blockTextInput.value,
+            url: blockUrlInput.value
+        });
+        const source = htmlInput.value;
+        const closingMain = /<\\/main\\s*>/i;
+        const closingBody = /<\\/body\\s*>/i;
+        if (closingMain.test(source)) {
+            htmlInput.value = source.replace(closingMain, block + '\\n</main>');
+        } else if (closingBody.test(source)) {
+            htmlInput.value = source.replace(closingBody, block + '\\n</body>');
+        } else {
+            htmlInput.value = source + '\\n' + block + '\\n';
+        }
+        blockTextInput.value = '';
+        updatePreview();
+        statusElement.textContent = 'Content block inserted. Save corrections to keep it.';
+    } catch (error) {
+        statusElement.textContent = error.message || 'The content block could not be inserted.';
+    } finally {
+        insertBlockButton.disabled = false;
+    }
+});
+updateBlockControls();
+
+
 
 createSiteButton.addEventListener('click', async () => {
     createSiteButton.disabled = true;
