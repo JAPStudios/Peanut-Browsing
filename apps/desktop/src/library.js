@@ -49,7 +49,7 @@ function updatePreview() {
     for (const asset of activePageAssets) {
         if (!asset.filename || !activeSiteId || !activeAssetToken) continue;
         const localUrl = 'peanut-asset://' + activeSiteId + '/' + asset.filename + '?token=' + activeAssetToken;
-        const references = [...(asset.references || []), asset.url].filter(Boolean);
+        const references = [...(Array.isArray(asset.references) ? asset.references : []), asset.url].filter(Boolean);
         for (const reference of references) {
             const escapedReference = reference.replace(/&/g, '&amp;').replace(/"/g, '&quot;');
             source = source.split(reference).join(localUrl);
