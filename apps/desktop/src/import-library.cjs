@@ -421,7 +421,7 @@ async function createWebsitePage(importRoot, input) {
     validateIds(input.siteId);
     const rawPath = typeof input.path === 'string' ? input.path.trim() : '';
     if (!rawPath || rawPath.length > 100) throw new Error('Enter a page path of 1 to 100 characters.');
-    const segments = rawPath.replace(/^\\/+|\\/+$/g, '').split('/');
+    const segments = rawPath.replace(/^\/+|\/+$/g, '').split('/');
     if (segments.some(segment => !/^[a-z0-9][a-z0-9-]{0,39}$/i.test(segment))) {
         throw new Error('Use letters, numbers and hyphens for each page-path segment.');
     }
@@ -435,7 +435,7 @@ async function createWebsitePage(importRoot, input) {
         throw new Error('That page path already exists in this website.');
     }
     const title = segments[segments.length - 1].replace(/-/g, ' ')
-        .replace(/\\b[a-z]/g, character => character.toUpperCase());
+        .replace(/\b[a-z]/g, character => character.toUpperCase());
     const pageId = fingerprint(url);
     const page = makeAuthoredPage(url, title);
     await atomicWrite(path.join(siteDirectory, pageId + '.json'), page);
