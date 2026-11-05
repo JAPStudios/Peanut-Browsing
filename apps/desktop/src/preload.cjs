@@ -8,6 +8,7 @@ contextBridge.exposeInMainWorld('peanutBrowser', {
     readImportedPage: input => ipcRenderer.invoke('peanut:read-imported-page', input),
     saveImportedPage: input => ipcRenderer.invoke('peanut:save-imported-page', input),
     newTab: () => ipcRenderer.invoke('peanut:new-tab'),
+    newPrivateTab: () => ipcRenderer.invoke('peanut:new-private-tab'),
     closeTab: id => ipcRenderer.invoke('peanut:close-tab', id),
     switchTab: id => ipcRenderer.invoke('peanut:switch-tab', id),
     back: () => ipcRenderer.invoke('peanut:back'),
