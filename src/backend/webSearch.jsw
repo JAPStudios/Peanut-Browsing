@@ -1,0 +1,55 @@
+import { fetch } from 'wix-fetch';
+import { secrets } from 'wix-secrets-backend.v2';
+import { elevate } from 'wix-auth';
+import { buildSearchUrl, normalizeSearchResults, validateSearchRequest } from 'backend/searchUtils';
+
+const elevatedGetSecretValue = elevate(secrets.getSecretValue);
+const SEARCH_ENDPOINT_SECRET = 'PEANUT_SEARCH_API_URL';
+const SEARCH_API_KEY_SECRET = 'PEANUT_SEARCH_API_KEY';
+
+async function readSecret(name, required) {
+    try {
+        const value = await elevatedGetSecretValue(name);
+        if (typeof value === 'string' && value.trim()) return value.trim();
+        if (value && typeof value.value === 'string' && value.value.trim()) return value.value.trim();
+    } catch (error) {
+        if (required) throw new Error('Peanut Browsing search is not connected to a search service yet.');
+    }
+    if (required) throw new Error('Peanut Browsing search is not connected to a search service yet.');
+    return '';
+}
+
+/** Searches the configured SearXNG service without exposing provider configuration to visitors. */
+export async function searchWeb(query, page) {
+    const request = validateSearchRequest(query, page);
+    const endpoint = await readSecret(SEARCH_ENDPOINT_SECRET, true);
+    const apiKey = await readSecret(SEARCH_API_KEY_SECRET, false);
+    const url = buildSearchUrl(endpoint, request.query, request.page);
+    const headers = { Accept: 'application/json' };
+    if (apiKey) headers['X-API-Key'] = apiKey;
+
+    let response;
+    try {
+        response = await fetch(url.href, { method: 'get', headers });
+    } catch (error) {
+        throw new Error('Peanut Browsing could not reach its search service. Try again shortly.');
+    }
+    if (!response.ok) throw new Error('The Peanut Browsing search service returned HTTP ' + response.status + '.');
+
+    let payload;
+    try { payload = await response.json(); } catch (error) {
+        throw new Error('The Peanut Browsing search service returned unreadable data.');
+    }
+    const results = normalizeSearchResults(payload.results);
+    const reportedCount = Number(payload.number_of_results);
+    const totalResults = Number.isFinite(reportedCount) && reportedCount >= 0 ? reportedCount : null;
+    return {
+        status: 'ok',
+        query: request.query,
+        page: request.page,
+        results,
+        resultCount: results.length,
+        totalResults,
+        hasNextPage: results.length >= 20
+    };
+}
