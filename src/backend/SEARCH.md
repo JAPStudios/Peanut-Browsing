@@ -14,7 +14,7 @@ The search adapter calls the authenticated gateway route `GET /index/search`. Th
 
 The Wix backend reads two required Wix Secrets Manager values:
 
-- `PEANUT_SEARCH_API_URL`: public HTTPS origin of the Peanut Browsing index gateway, without a path.
+- `PEANUT_SEARCH_API_URL`: public HTTPS base address of the Peanut Browsing index gateway. An optional reverse-proxy path prefix is supported.
 - `PEANUT_SEARCH_API_KEY`: the gateway key matching the first-party index service.
 
 No external search provider is configured as a fallback. If the first-party index is unreachable, the search request returns an explicit error rather than silently switching engines.
