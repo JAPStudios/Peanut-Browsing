@@ -236,7 +236,9 @@ api.onImportProgress(progress => {
     const sitePrefix = progress.websiteTotal
         ? 'Website ' + progress.websiteIndex + ' of ' + progress.websiteTotal + ': '
         : '';
-    batchStatus.textContent = sitePrefix + 'captured ' + progress.completed + ' page(s).';
+    batchStatus.textContent = progress.status === 'discovering-sitemaps'
+        ? sitePrefix + 'checking robots.txt and sitemap indexes…'
+        : sitePrefix + 'captured ' + progress.completed + ' page(s).';
 });
 document.getElementById('clear-history').addEventListener('click', async () => {
     profile = await api.clearHistory();
