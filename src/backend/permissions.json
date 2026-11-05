@@ -3,13 +3,13 @@
     "*": {
       "*": {
         "siteOwner": {
-          "invoke": true
+          "invoke": false
         },
         "siteMember": {
-          "invoke": true
+          "invoke": false
         },
         "anonymous": {
-          "invoke": true
+          "invoke": false
         }
       }
     },
@@ -28,6 +28,19 @@
     },
     "backend/siteInventory.jsw": {
       "previewWebsiteInventory": {
+        "siteOwner": {
+          "invoke": true
+        },
+        "siteMember": {
+          "invoke": false
+        },
+        "anonymous": {
+          "invoke": false
+        }
+      }
+    },
+    "backend/importedPages.jsw": {
+      "saveImportedPages": {
         "siteOwner": {
           "invoke": true
         },
