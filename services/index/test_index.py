@@ -181,7 +181,9 @@ class SearchIndexTests(unittest.TestCase):
         self.assertEqual(result["indexed"], 2)
         self.assertEqual(result["originsChecked"], 2)
         self.assertEqual(store.pages, ["https://one.example/", "https://two.example/page"])
-        robots_reader.assert_called_once_with("https://two.example/")
+        self.assertEqual(robots_reader.call_count, 2)
+        robots_reader.assert_any_call("https://one.example/")
+        robots_reader.assert_any_call("https://two.example/")
 
     def test_public_url_validation_rejects_unsafe_destinations(self):
         for value in (
