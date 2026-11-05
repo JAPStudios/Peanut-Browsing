@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { normalizeSearchResults, validateSearchEndpoint, validateSearchRequest } from './searchUtils.js';
+import { normalizeSearchResults, normalizeTotalResults, validateSearchEndpoint, validateSearchRequest } from './searchUtils.js';
 
 test('normalizes search phrases and validates page numbers', () => {
     assert.deepEqual(validateSearchRequest('  peanut   browsing ', 2), { query: 'peanut browsing', page: 2 });
@@ -31,4 +31,13 @@ test('normalizes, deduplicates and filters unsafe search results', () => {
         snippet: 'A result', engine: 'engine-a', score: 2
     });
     assert.equal(results[1].title, 'second.example');
+});
+
+test('preserves unknown result totals instead of treating null as zero', () => {
+    assert.equal(normalizeTotalResults(null), null);
+    assert.equal(normalizeTotalResults(undefined), null);
+    assert.equal(normalizeTotalResults('not-a-number'), null);
+    assert.equal(normalizeTotalResults(0), 0);
+    assert.equal(normalizeTotalResults('42'), 42);
+    assert.equal(normalizeTotalResults(-1), null);
 });
