@@ -54,3 +54,25 @@ test('rejects empty and overlong queries', () => {
     assert.throws(() => normalizeSearchPayload('  ', { status: 'ok', results: [] }));
     assert.throws(() => normalizeSearchPayload('x'.repeat(201), { status: 'ok', results: [] }));
 });
+
+test('parses only valid internal search-page navigation requests', () => {
+    const { parseSearchNavigation } = require('../src/search-page.cjs');
+    assert.deepEqual(
+        parseSearchNavigation('peanut-search://results/?q=peanut%20browsing&page=2'),
+        { query: 'peanut browsing', page: 2 }
+    );
+    assert.deepEqual(
+        parseSearchNavigation('peanut-search://results/?q=peanut'),
+        { query: 'peanut', page: 1 }
+    );
+    for (const value of [
+        'https://example.org/',
+        'peanut-search://other/?q=peanut',
+        'peanut-search://results/?q=&page=1',
+        'peanut-search://results/?q=peanut&page=21',
+        'peanut-search://results/?q=peanut&page=1&page=2',
+        'peanut-search://results/?q=peanut&q=other&page=1'
+    ]) {
+        assert.equal(parseSearchNavigation(value), null);
+    }
+});
