@@ -11,6 +11,7 @@ contextBridge.exposeInMainWorld('peanutBrowser', {
     removeBookmark: value => ipcRenderer.invoke('peanut:remove-bookmark', value),
     clearHistory: () => ipcRenderer.invoke('peanut:clear-history'),
     listImports: () => ipcRenderer.invoke('peanut:list-imports'),
+    createContentBlock: input => ipcRenderer.invoke('peanut:create-content-block', input),
     createWebsite: input => ipcRenderer.invoke('peanut:create-website', input),
     createWebsitePage: input => ipcRenderer.invoke('peanut:create-website-page', input),
     readImportedPage: input => ipcRenderer.invoke('peanut:read-imported-page', input),
