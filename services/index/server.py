@@ -8,6 +8,7 @@ requires the shared gateway key for search and crawl operations.
 from __future__ import annotations
 
 import hmac
+from contextlib import contextmanager
 import ipaddress
 import json
 import os
@@ -149,10 +150,18 @@ class IndexStore:
                 "USING fts5(title, url UNINDEXED, body, tokenize='unicode61')"
             )
 
+    @contextmanager
     def connect(self):
         connection = sqlite3.connect(self.path, timeout=10)
         connection.row_factory = sqlite3.Row
-        return connection
+        try:
+            yield connection
+            connection.commit()
+        except Exception:
+            connection.rollback()
+            raise
+        finally:
+            connection.close()
 
     def upsert(self, url: str, title: str, body: str):
         with self.connect() as connection:
