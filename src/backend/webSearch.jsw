@@ -23,10 +23,10 @@ async function readSecret(name, required) {
 export async function searchWeb(query, page) {
     const request = validateSearchRequest(query, page);
     const endpoint = await readSecret(SEARCH_ENDPOINT_SECRET, true);
-    const apiKey = await readSecret(SEARCH_API_KEY_SECRET, false);
+    const apiKey = await readSecret(SEARCH_API_KEY_SECRET, true);
     const url = buildSearchUrl(endpoint, request.query, request.page);
     const headers = { Accept: 'application/json' };
-    if (apiKey) headers['X-API-Key'] = apiKey;
+    headers['X-API-Key'] = apiKey;
 
     let response;
     try {
