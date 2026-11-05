@@ -1,0 +1,47 @@
+const net = require('node:net');
+
+function normalizeHttpUrl(value, requiredOrigin) {
+    let url;
+    try {
+        url = new URL(value);
+    } catch {
+        return null;
+    }
+    if (!['http:', 'https:'].includes(url.protocol) || url.username || url.password ||
+        net.isIP(url.hostname)) return null;
+    if (url.hostname === 'localhost' || url.hostname.endsWith('.localhost') ||
+        url.hostname.endsWith('.local') || url.hostname.includes(':') ||
+        /^127\./.test(url.hostname) || /^10\./.test(url.hostname) ||
+        /^192\.168\./.test(url.hostname) || /^169\.254\./.test(url.hostname) ||
+        /^172\.(1[6-9]|2[0-9]|3[01])\./.test(url.hostname)) return null;
+    if (requiredOrigin && url.origin !== requiredOrigin) return null;
+    url.hash = '';
+    return url;
+}
+
+function decodeXml(value) {
+    const decodePoint = number => {
+        const point = Number(number);
+        return point >= 0 && point <= 0x10FFFF && !(point >= 0xD800 && point <= 0xDFFF)
+            ? String.fromCodePoint(point)
+            : '';
+    };
+    return String(value).replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, '$1')
+        .replace(/&amp;/gi, '&').replace(/&quot;/gi, '"')
+        .replace(/&apos;|&#39;/gi, "'").replace(/&lt;/gi, '<')
+        .replace(/&gt;/gi, '>').replace(/&#(\d+);/g, (_, n) => decodePoint(n))
+        .replace(/&#x([\da-f]+);/gi, (_, n) => decodePoint(parseInt(n, 16)));
+}
+
+function extractSitemapLocations(xml, limit = 2000) {
+    const locations = [];
+    const pattern = /<(?:[\w.-]+:)?loc\b[^>]*>([\s\S]*?)<\/(?:[\w.-]+:)?loc\s*>/gi;
+    let match;
+    while ((match = pattern.exec(String(xml))) && locations.length < limit) {
+        const location = decodeXml(match[1].trim());
+        if (location) locations.push(location);
+    }
+    return locations;
+}
+
+module.exports = { normalizeHttpUrl, decodeXml, extractSitemapLocations };
