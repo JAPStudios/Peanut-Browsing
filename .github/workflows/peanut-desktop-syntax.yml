@@ -30,6 +30,8 @@ jobs:
         run: node --check apps/desktop/src/import-library.cjs
       - name: Check browser profile store
         run: node --check apps/desktop/src/profile-store.cjs
+      - name: Check sitemap utilities
+        run: node --check apps/desktop/src/sitemap-utils.cjs
       - name: Check library interface
         run: node --check apps/desktop/src/library.js
       - name: Test imported-site library
