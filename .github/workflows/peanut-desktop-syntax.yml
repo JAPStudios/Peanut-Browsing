@@ -5,10 +5,12 @@ on:
     paths:
       - "apps/desktop/**"
       - "services/search/**"
+      - "src/backend/**"
       - ".github/workflows/peanut-desktop-syntax.yml"
   pull_request:
     paths:
       - "apps/desktop/**"
+      - "src/backend/**"
       - ".github/workflows/peanut-desktop-syntax.yml"
 
 concurrency:
@@ -23,6 +25,12 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
+      - name: Check Wix search helper syntax
+        run: node --experimental-default-type=module --check src/backend/searchUtils.js
+      - name: Test Wix search helper
+        run: node --experimental-default-type=module --test src/backend/searchUtils.test.js
+      - name: Check Wix search web module syntax
+        run: node --input-type=module --check < src/backend/webSearch.jsw
       - name: Check Electron main process
         run: node --check apps/desktop/src/main.cjs
       - name: Check website importer
