@@ -196,7 +196,9 @@ async function loadPage(pageId) {
         sourceUpdateNote.textContent = page.sourceUpdatedSinceEdit
             ? 'The live website changed after these corrections were saved. The edited version has been preserved.'
             : '';
-        restoreSourceButton.disabled = !page.sourceHtml;
+        restoreSourceButton.disabled = ![
+            page.sourceTitle, page.sourceDescription, page.sourceHtml, page.sourceTextContent
+        ].some(value => typeof value === 'string');
         htmlInput.value = page.html || '';
         textInput.value = page.textContent || '';
         pageUrl.textContent = page.url || '';
@@ -210,6 +212,16 @@ async function loadPage(pageId) {
         statusElement.textContent = error.message || 'The imported page could not be opened.';
     }
 }
+
+restoreSourceButton.addEventListener('click', () => {
+    if (!currentPage || !selectedSiteId || !selectedPageId) return;
+    titleInput.value = currentPage.sourceTitle ?? currentPage.title ?? '';
+    descriptionInput.value = currentPage.sourceDescription ?? currentPage.description ?? '';
+    htmlInput.value = currentPage.sourceHtml ?? currentPage.html ?? '';
+    textInput.value = currentPage.sourceTextContent ?? currentPage.textContent ?? '';
+    updatePreview();
+    statusElement.textContent = 'Original imported source restored in the editor. Save corrections to apply it.';
+});
 
 editor.addEventListener('submit', async event => {
     event.preventDefault();
