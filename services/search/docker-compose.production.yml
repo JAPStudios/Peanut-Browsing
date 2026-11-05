@@ -17,6 +17,19 @@ services:
     networks:
       - search-backend
 
+  index:
+    container_name: peanut-browsing-first-party-index
+    build:
+      context: ../index
+    restart: unless-stopped
+    environment:
+      INDEX_DB_PATH: /data/index.sqlite
+      PEANUT_SEARCH_API_KEY: ${PEANUT_SEARCH_API_KEY:?Set PEANUT_SEARCH_API_KEY in .env}
+    volumes:
+      - index-data:/data/
+    networks:
+      - search-backend
+
   valkey:
     container_name: peanut-browsing-search-cache
     image: docker.io/valkey/valkey:9-alpine
@@ -40,6 +53,7 @@ services:
       - ./gateway/default.conf.template:/etc/nginx/templates/default.conf.template:ro
     depends_on:
       - core
+      - index
     networks:
       - search-backend
 
@@ -50,3 +64,4 @@ networks:
 volumes:
   search-cache:
   valkey-cache:
+  index-data:
