@@ -362,10 +362,19 @@ async function crawlSite(startAddress, onProgress = () => {}) {
                     htmlTruncated: String(extracted.html || '').length >= MAX_HTML_CHARS,
                     textTruncated: String(extracted.textContent || '').length >= MAX_TEXT_CHARS
                 };
-                const assetUrls = Array.from(new Set(extracted.assets || [])).slice(0, MAX_ASSETS_PER_PAGE);
-                const pageAssets = await Promise.all(assetUrls.map(assetUrl =>
-                    downloadAsset(browserSession, assetUrl, origin, assetsDirectory, assetState)
-                ));
+                const assetReferences = new Map();
+                for (const asset of extracted.assets || []) {
+                    const assetUrl = typeof asset === 'string' ? asset : asset?.url;
+                    const reference = typeof asset === 'string' ? asset : asset?.reference;
+                    if (!assetUrl) continue;
+                    if (!assetReferences.has(assetUrl)) assetReferences.set(assetUrl, new Set());
+                    if (reference) assetReferences.get(assetUrl).add(reference);
+                }
+                const assetEntries = Array.from(assetReferences.entries()).slice(0, MAX_ASSETS_PER_PAGE);
+                const pageAssets = await Promise.all(assetEntries.map(async ([assetUrl, references]) => {
+                    const record = await downloadAsset(browserSession, assetUrl, origin, assetsDirectory, assetState);
+                    return record ? { ...record, references: Array.from(references) } : null;
+                }));
                 page.assets = pageAssets.filter(Boolean);
                 const savedPage = await writePage(importDirectory, page);
                 saved.push(savedPage);
