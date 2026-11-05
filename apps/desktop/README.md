@@ -4,7 +4,7 @@ The desktop application is a separate Electron browser client inside the Peanut 
 
 ## Development
 
-Requirements: Node.js 20 or newer, npm, plus Docker Desktop for the local search service.
+Requirements: Node.js 20 or newer, npm.
 
 1. Open a terminal in `apps/desktop`.
 2. Run `npm install`.
@@ -12,7 +12,7 @@ Requirements: Node.js 20 or newer, npm, plus Docker Desktop for the local search
 4. Run `npm test` to execute the desktop unit tests.
 5. Run `npm start`.
 
-To use a different search service, set `PEANUT_SEARCH_URL` to an HTTP or HTTPS URL containing the literal `{query}` placeholder.
+The default search destination is Peanut Browsing's published Wix HTTP search endpoint. It queries only Peanut Browsing's own first-party index. To point the browser at another Peanut Browsing search deployment, set `PEANUT_SEARCH_URL` to its HTTP or HTTPS search URL containing the literal `{query}` placeholder.
 
 ## Current implementation
 
