@@ -105,5 +105,5 @@ test('search form rejects phrases without an indexable term', () => {
     const fs = require('node:fs');
     const path = require('node:path');
     const source = fs.readFileSync(path.join(__dirname, '../src/search.js'), 'utf8');
-    assert.ok(source.includes(String.raw`if (!/[\p{L}\p{N}_]{2,}/u.test(query))`));
+    assert.ok(source.includes(String.raw`if (!/[\p{L}\p{N}]{2,}/u.test(query))`));
 });
