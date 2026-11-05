@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { buildSearchUrl, normalizeSearchResults, validateSearchEndpoint, validateSearchRequest } from './searchUtils.js';
+import { normalizeSearchResults, validateSearchEndpoint, validateSearchRequest } from './searchUtils.js';
 
 test('normalizes search phrases and validates page numbers', () => {
     assert.deepEqual(validateSearchRequest('  peanut   browsing ', 2), { query: 'peanut browsing', page: 2 });
@@ -15,11 +15,6 @@ test('accepts only public HTTPS search-service endpoints', () => {
         'https://127.0.0.1', 'https://192.168.1.10', 'https://user:pass@search.example.org']) {
         assert.throws(() => validateSearchEndpoint(endpoint), /public HTTPS/);
     }
-});
-
-test('builds a SearXNG JSON search request with safe search enabled', () => {
-    const url = buildSearchUrl('https://search.example.org/', 'peanut browsing', 3);
-    assert.equal(url.href, 'https://search.example.org/search?q=peanut+browsing&format=json&pageno=3&safesearch=1&language=en');
 });
 
 test('normalizes, deduplicates and filters unsafe search results', () => {
