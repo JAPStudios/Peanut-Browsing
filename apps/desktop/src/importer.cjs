@@ -2,7 +2,7 @@ const crypto = require('node:crypto');
 const fs = require('node:fs/promises');
 const path = require('node:path');
 const { app, BrowserWindow } = require('electron');
-const { normalizeHttpUrl, decodeXml, extractSitemapLocations, assertPublicHostname } = require('./sitemap-utils.cjs');
+const { normalizeHttpUrl, normalizeAssetUrl, decodeXml, extractSitemapLocations, assertPublicHostname } = require('./sitemap-utils.cjs');
 
 const MAX_PAGES = 250;
 const MAX_HTML_CHARS = 350000;
@@ -173,8 +173,23 @@ async function discoverSitemapPages(browserSession, origin, pathPrefix = '/') {
 }
 
 async function downloadAsset(browserSession, value, origin, directory, assetState) {
-    const assetUrl = normalizeHttpUrl(value, origin);
+    const assetUrl = normalizeAssetUrl(value, origin);
     if (!assetUrl) return null;
+    if (!assetState.validatedHosts.has(assetUrl.hostname)) {
+        let hostValidation = assetState.pendingHosts.get(assetUrl.hostname);
+        if (!hostValidation) {
+            hostValidation = assertPublicHostname(assetUrl.hostname);
+            assetState.pendingHosts.set(assetUrl.hostname, hostValidation);
+        }
+        try {
+            await hostValidation;
+            assetState.validatedHosts.add(assetUrl.hostname);
+        } catch {
+            return null;
+        } finally {
+            assetState.pendingHosts.delete(assetUrl.hostname);
+        }
+    }
     if (assetState.byUrl.has(assetUrl.href)) return assetState.byUrl.get(assetUrl.href);
     if (assetState.pending.has(assetUrl.href)) return assetState.pending.get(assetUrl.href);
     if (assetState.byUrl.size + assetState.pending.size >= MAX_TOTAL_ASSETS) return null;
@@ -292,7 +307,14 @@ async function crawlSite(startAddress, onProgress = () => {}) {
     const assetsDirectory = path.join(importDirectory, 'assets');
     await fs.mkdir(assetsDirectory, { recursive: true });
     const browserSession = contents.session;
-    const assetState = { byUrl: new Map(), pending: new Map(), totalBytes: 0, reservedBytes: 0 };
+    const assetState = {
+            byUrl: new Map(),
+            pending: new Map(),
+            validatedHosts: new Set([start.hostname]),
+            pendingHosts: new Map(),
+            totalBytes: 0,
+            reservedBytes: 0
+        };
 
     onProgress({ status: 'discovering-sitemaps', websiteUrl: origin, completed: 0, limit: MAX_PAGES });
     const sitemapDiscovery = await discoverSitemapPages(browserSession, origin, pathPrefix);
