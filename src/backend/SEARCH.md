@@ -22,7 +22,7 @@ The Wix backend adapts the SearXNG metasearch service in `services/search/`. The
 5. The Nginx gateway accepts only `GET /search` requests with the configured `X-API-Key`. It applies a conservative shared rate limit of 2 requests per second with a burst of 10. SearXNG and Valkey are not published on host ports; only the gateway can reach them on the private Compose network.
 6. In the Peanut Browsing Wix site's Secrets Manager, create:
    - `PEANUT_SEARCH_API_URL`: the public HTTPS origin, for example `https://search.example.org` (no `/search` suffix).
-   - `PEANUT_SEARCH_API_KEY`: the exact value of `PEANUT_SEARCH_API_KEY` from the server's private `.env`.
+   - `PEANUT_SEARCH_API_KEY`: the exact value of `PEANUT_SEARCH_API_KEY` from the server's private `.env`. This secret is mandatory; the Wix backend refuses to search without it.
 7. Publish the Wix Velo backend. Test `/_functions/peanutSearch?q=peanut&page=1` on the published site and confirm that it returns `status: "ok"` with result records.
 
 The Nginx gateway's initial rate limit is shared across all Wix backend requests because the single shared API key does not identify individual visitors. Review actual traffic before increasing the limit or introducing per-user credentials. The HTTPS reverse proxy must preserve the `X-API-Key` header. Keep SearXNG's upstream port private.
