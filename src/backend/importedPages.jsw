@@ -1,4 +1,5 @@
 import wixData from 'wix-data';
+import { validatePublicWebsiteUrl } from 'backend/searchUtils';
 
 const COLLECTION_ID = 'peanut-imported-pages';
 const MAX_PAGES_PER_BATCH = 25;
@@ -16,21 +17,11 @@ function cleanText(value, maxLength) {
 }
 
 function parsePublicUrl(value) {
-    if (typeof value !== 'string' || value.length > 2048) fail('A valid public page URL is required.');
-    let url;
     try {
-        url = new URL(value);
+        return new URL(validatePublicWebsiteUrl(value));
     } catch (error) {
-        fail('A valid public page URL is required.');
+        fail(error && error.message ? error.message : 'Only public HTTP or HTTPS page URLs are accepted.');
     }
-    if (!['http:', 'https:'].includes(url.protocol) || url.username || url.password ||
-        url.hostname === 'localhost' || url.hostname.endsWith('.localhost') ||
-        url.hostname.endsWith('.local') || url.hostname.includes(':') ||
-        /^\d{1,3}(?:\.\d{1,3}){3}$/.test(url.hostname)) {
-        fail('Only public-domain HTTP or HTTPS page URLs are accepted.');
-    }
-    url.hash = '';
-    return url;
 }
 
 function stableId(value) {
