@@ -20,6 +20,10 @@ const batchSitesInput = document.getElementById('batch-sites');
 const batchImportButton = document.getElementById('batch-import');
 const exportButton = document.getElementById('export-site');
 const batchStatus = document.getElementById('batch-status');
+const newSiteNameInput = document.getElementById('new-site-name');
+const createSiteButton = document.getElementById('create-site');
+const newPagePathInput = document.getElementById('new-page-path');
+const createPageButton = document.getElementById('create-page');
 
 let sites = [];
 let profile = { bookmarks: [], history: [] };
@@ -122,12 +126,13 @@ function renderProfile() {
 
 function renderSites() {
     sitesElement.replaceChildren(...sites.map(site => makeItem(
-        site.websiteUrl || 'Imported website',
+        site.name || site.websiteUrl || 'Imported website',
         site.pageCount + ' pages · ' + site.errorCount + ' import errors',
         site.id === selectedSiteId,
         () => selectSite(site.id)
     )));
     exportButton.disabled = !sites.some(site => site.id === selectedSiteId);
+    createPageButton.disabled = !sites.some(site => site.id === selectedSiteId && site.authored);
 }
 
 function renderPages() {
@@ -253,6 +258,42 @@ editor.addEventListener('submit', async event => {
 });
 
 htmlInput.addEventListener('input', updatePreview);
+
+createSiteButton.addEventListener('click', async () => {
+    createSiteButton.disabled = true;
+    batchStatus.textContent = 'Creating website…';
+    try {
+        const result = await api.createWebsite({ name: newSiteNameInput.value });
+        newSiteNameInput.value = '';
+        await loadSites();
+        selectSite(result.id);
+        await selectPage(result.pageId);
+        batchStatus.textContent = 'Created ' + result.websiteUrl + '. Add pages, edit the source, then export the website.';
+    } catch (error) {
+        batchStatus.textContent = error.message || 'Website creation failed.';
+    } finally {
+        createSiteButton.disabled = false;
+    }
+});
+
+createPageButton.addEventListener('click', async () => {
+    if (!selectedSiteId) return;
+    createPageButton.disabled = true;
+    batchStatus.textContent = 'Adding page…';
+    try {
+        const result = await api.createWebsitePage({ siteId: selectedSiteId, path: newPagePathInput.value });
+        newPagePathInput.value = '';
+        await loadSites();
+        selectSite(result.siteId);
+        await selectPage(result.pageId);
+        batchStatus.textContent = 'Added ' + result.url;
+    } catch (error) {
+        batchStatus.textContent = error.message || 'Page creation failed.';
+    } finally {
+        createPageButton.disabled = !sites.some(site => site.id === selectedSiteId && site.authored);
+    }
+});
+
 exportButton.addEventListener('click', async () => {
     if (!selectedSiteId) return;
     exportButton.disabled = true;
