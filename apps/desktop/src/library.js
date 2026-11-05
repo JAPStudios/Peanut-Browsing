@@ -213,7 +213,7 @@ editor.addEventListener('submit', async event => {
 
 htmlInput.addEventListener('input', updatePreview);
 batchImportButton.addEventListener('click', async () => {
-    const addresses = Array.from(new Set(batchSitesInput.value.split(/\\r?\\n/).map(value => value.trim()).filter(Boolean)));
+    const addresses = Array.from(new Set(batchSitesInput.value.split(/\r?\n/).map(value => value.trim()).filter(Boolean)));
     if (addresses.length === 0 || addresses.length > 10) {
         batchStatus.textContent = 'Enter between 1 and 10 website addresses, one per line.';
         return;
