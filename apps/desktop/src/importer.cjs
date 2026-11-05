@@ -52,8 +52,15 @@ async function extractPage(windowRef) {
                 .map(link => link.href),
             assets: Array.from(document.querySelectorAll('img[src], source[src], video[poster], audio[src], link[href], script[src]'))
                 .slice(0, 100)
-                .map(element => element.currentSrc || element.href || element.src || element.poster)
-                .filter(Boolean)
+                .flatMap(element => ['src', 'href', 'poster']
+                    .filter(attribute => element.hasAttribute(attribute))
+                    .map(attribute => ({
+                        url: attribute === 'href'
+                            ? element.href
+                            : (attribute === 'poster' ? element.poster : (element.currentSrc || element.src)),
+                        reference: element.getAttribute(attribute)
+                    })))
+                .filter(asset => asset.url)
         };
     })()`, false);
 }
