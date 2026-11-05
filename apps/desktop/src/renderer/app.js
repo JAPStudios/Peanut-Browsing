@@ -18,7 +18,8 @@ function makeTab(tab, activeTabId) {
 
     const title = document.createElement('span');
     title.className = 'tab-title';
-    title.textContent = tab.loading ? 'Loading…' : (tab.title || 'New Tab');
+    title.textContent = (tab.private ? 'Private · ' : '') +
+        (tab.loading ? 'Loading…' : (tab.title || 'New Tab'));
 
     const close = document.createElement('span');
     close.className = 'close-tab';
