@@ -18,6 +18,9 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
+      - name: Install desktop dependencies
+        working-directory: apps/desktop
+        run: npm install --package-lock=false --no-audit --no-fund
       - name: Run desktop tests
         working-directory: apps/desktop
         run: npm test
