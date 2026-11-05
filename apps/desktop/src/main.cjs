@@ -16,7 +16,7 @@ protocol.registerSchemesAsPrivileged([{
     }
 }]);
 const { crawlSite } = require('./importer.cjs');
-const { listImportedSites, readImportedPage, saveImportedPage } = require('./import-library.cjs');
+const { listImportedSites, readImportedPage, saveImportedPage, exportImportedSite } = require('./import-library.cjs');
 const { createProfileStore, normalizeUrl } = require('./profile-store.cjs');
 
 const TOOLBAR_HEIGHT = 104;
@@ -527,6 +527,23 @@ function registerIpc() {
     ipcMain.handle('peanut:save-imported-page', (event, input) => {
         if (!isTrustedUi(event)) throw new Error('Not authorised.');
         return saveImportedPage(importRoot(), input);
+    });
+    ipcMain.handle('peanut:export-site', async (event, siteId) => {
+        if (!isTrustedUi(event)) throw new Error('Not authorised.');
+        const parent = libraryWindow && !libraryWindow.isDestroyed() ? libraryWindow : windowRef;
+        const selection = parent && !parent.isDestroyed()
+            ? await dialog.showOpenDialog(parent, {
+                title: 'Choose a folder for the exported website',
+                buttonLabel: 'Export here',
+                properties: ['openDirectory', 'createDirectory']
+            })
+            : await dialog.showOpenDialog({
+                title: 'Choose a folder for the exported website',
+                buttonLabel: 'Export here',
+                properties: ['openDirectory', 'createDirectory']
+            });
+        if (selection.canceled || !selection.filePaths[0]) return { status: 'cancelled' };
+        return exportImportedSite(importRoot(), siteId, selection.filePaths[0]);
     });
     ipcMain.handle('peanut:import-site', async event => {
         if (!isChrome(event)) throw new Error('Not authorised.');
