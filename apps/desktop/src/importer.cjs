@@ -362,7 +362,7 @@ async function crawlSite(startAddress, onProgress = () => {}) {
                     url: finalUrl.href,
                     title: String(extracted.title || '').slice(0, 512),
                     description: String(extracted.description || '').slice(0, 4000),
-                    canonicalUrl: normalizeHttpUrl(extracted.canonicalUrl, origin)?.href || finalUrl.href,
+                    canonicalUrl: normalizeHttpUrl(extracted.canonicalUrl, origin, pathPrefix)?.href || finalUrl.href,
                     language: String(extracted.language || '').slice(0, 35),
                     html: String(extracted.html || '').slice(0, MAX_HTML_CHARS),
                     textContent: String(extracted.textContent || '').slice(0, MAX_TEXT_CHARS),
