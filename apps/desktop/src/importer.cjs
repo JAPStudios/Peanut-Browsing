@@ -251,15 +251,41 @@ async function downloadAsset(browserSession, value, origin, directory, assetStat
 async function writePage(directory, page) {
     const id = fingerprint(page.url);
     const filename = id + '.json';
+    const pagePath = path.join(directory, filename);
+    const sourceHash = fingerprint([
+        page.title,
+        page.description,
+        page.html,
+        page.textContent
+    ].join('\n'));
+
+    let existing = null;
+    try {
+        existing = JSON.parse(await fs.readFile(pagePath, 'utf8'));
+    } catch {
+        existing = null;
+    }
+    const wasEdited = Boolean(existing && existing.editedAt &&
+        existing.editedHash && existing.editedHash !== existing.sourceHash);
     const record = {
         ...page,
-        sourceHash: fingerprint(page.html + '\n' + page.textContent),
+        sourceTitle: page.title,
+        sourceDescription: page.description,
+        sourceHtml: page.html,
+        sourceTextContent: page.textContent,
+        sourceHash,
+        title: wasEdited ? existing.title : page.title,
+        description: wasEdited ? existing.description : page.description,
+        html: wasEdited ? existing.html : page.html,
+        textContent: wasEdited ? existing.textContent : page.textContent,
+        editedHash: wasEdited ? existing.editedHash : sourceHash,
+        editedAt: wasEdited ? existing.editedAt : null,
+        sourceUpdatedSinceEdit: Boolean(wasEdited && existing.sourceHash !== sourceHash),
         importedAt: new Date().toISOString()
     };
-    await fs.writeFile(path.join(directory, filename), JSON.stringify(record), 'utf8');
-    return { id, filename, url: page.url, title: page.title };
+    await fs.writeFile(pagePath, JSON.stringify(record), 'utf8');
+    return { id, filename, url: page.url, title: record.title };
 }
-
 async function crawlSite(startAddress, onProgress = () => {}) {
     const start = normalizeHttpUrl(startAddress);
     if (!start) throw new Error('Open a public HTTP or HTTPS website before starting an import.');
