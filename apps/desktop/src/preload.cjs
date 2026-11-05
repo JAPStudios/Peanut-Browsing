@@ -3,6 +3,10 @@ const { contextBridge, ipcRenderer } = require('electron');
 contextBridge.exposeInMainWorld('peanutBrowser', {
     navigate: value => ipcRenderer.invoke('peanut:navigate', value),
     importSite: () => ipcRenderer.invoke('peanut:import-site'),
+    openLibrary: () => ipcRenderer.invoke('peanut:open-library'),
+    listImports: () => ipcRenderer.invoke('peanut:list-imports'),
+    readImportedPage: input => ipcRenderer.invoke('peanut:read-imported-page', input),
+    saveImportedPage: input => ipcRenderer.invoke('peanut:save-imported-page', input),
     newTab: () => ipcRenderer.invoke('peanut:new-tab'),
     closeTab: id => ipcRenderer.invoke('peanut:close-tab', id),
     switchTab: id => ipcRenderer.invoke('peanut:switch-tab', id),
