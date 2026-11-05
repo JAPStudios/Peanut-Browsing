@@ -9,6 +9,10 @@ const paginationElement = document.getElementById('pagination');
 const searchForm = document.getElementById('search-form');
 const searchInput = document.getElementById('search-query');
 
+searchInput.addEventListener('input', () => {
+    searchInput.setCustomValidity('');
+});
+
 searchForm.addEventListener('submit', event => {
     event.preventDefault();
     const query = searchInput.value.trim().replace(/\s+/g, ' ');
