@@ -34,15 +34,15 @@ jobs:
         run: node --check apps/desktop/src/sitemap-utils.cjs
       - name: Check library interface
         run: node --check apps/desktop/src/library.js
+      - name: Resolve desktop dependencies
+        working-directory: apps/desktop
+        run: npm install --package-lock=false --no-audit --no-fund
       - name: Test imported-site library
         run: node --test apps/desktop/test/*.test.cjs
       - name: Check preload bridge
         run: node --check apps/desktop/src/preload.cjs
       - name: Check renderer
         run: node --check apps/desktop/src/renderer/app.js
-      - name: Resolve desktop dependencies
-        working-directory: apps/desktop
-        run: npm install --package-lock=false --no-audit --no-fund
       - name: Verify ad and tracker filter exports
         working-directory: apps/desktop
         run: node -e "const m = require('@ghostery/adblocker-electron'); if (typeof m.ElectronBlocker.fromLists !== 'function' || !Array.isArray(m.adsAndTrackingLists) || m.adsAndTrackingLists.length === 0) process.exit(1)"
@@ -85,4 +85,7 @@ jobs:
           node -e "const data = require('/tmp/peanut-search.json'); if (!Array.isArray(data.results)) process.exit(1);"
       - name: Stop SearXNG search service
         if: always()
-        run: docker compose -f services/search/docker-compose.yml down -v
+        run: |
+          if [ -f services/search/.env ]; then
+            docker compose -f services/search/docker-compose.yml down -v
+          fi
