@@ -114,13 +114,39 @@ function attachTabEvents(tab) {
         publishState();
     });
 
-    contents.on('will-navigate', (event, destination) => {
-        if (!safeWebUrl(destination) && destination !== 'file://' + NEW_TAB_FILE) {
-            event.preventDefault();
-        }
-    });
-    contents.on('will-redirect', (event, destination) => {
+    contents.on('will-navigate', (event, details) => {
+        const destination = typeof details === 'string' ? details : details?.url;
         if (!safeWebUrl(destination)) event.preventDefault();
+    });
+    contents.on('will-redirect', (event, details) => {
+        const destination = typeof details === 'string' ? details : details?.url;
+        if (!safeWebUrl(destination)) event.preventDefault();
+    });
+    contents.on('before-input-event', (event, input) => {
+        if (input.type !== 'keyDown') return;
+        const modifier = input.control || input.meta;
+        const key = String(input.key || '').toLowerCase();
+        if (modifier && key === 'l') {
+            event.preventDefault();
+            if (chromeView && !chromeView.webContents.isDestroyed()) {
+                chromeView.webContents.send('peanut:focus-address');
+            }
+        } else if (modifier && key === 't') {
+            event.preventDefault();
+            createTab();
+        } else if (modifier && key === 'w') {
+            event.preventDefault();
+            closeTab(tab.id);
+        } else if (modifier && key === 'r') {
+            event.preventDefault();
+            contents.reload();
+        } else if (input.alt && key === 'arrowleft' && contents.navigationHistory.canGoBack()) {
+            event.preventDefault();
+            contents.navigationHistory.goBack();
+        } else if (input.alt && key === 'arrowright' && contents.navigationHistory.canGoForward()) {
+            event.preventDefault();
+            contents.navigationHistory.goForward();
+        }
     });
     contents.setWindowOpenHandler(({ url }) => {
         const destination = safeWebUrl(url);
