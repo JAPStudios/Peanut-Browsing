@@ -53,6 +53,7 @@ function normalizeAssetUrl(value, requiredOrigin) {
     const url = normalizeHttpUrl(value);
     if (!url) return null;
     if (url.origin === requiredOrigin) return url;
+    if (url.protocol !== 'https:') return null;
     const trustedCdn = [
         '.wixstatic.com',
         '.parastorage.com',
