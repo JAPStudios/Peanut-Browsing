@@ -17,6 +17,9 @@ protocol.registerSchemesAsPrivileged([{
 }, {
     scheme: 'peanut-search',
     privileges: { standard: true, secure: true, supportFetchAPI: true, corsEnabled: true }
+}, {
+    scheme: 'peanut-site',
+    privileges: { standard: true, secure: true, supportFetchAPI: true, corsEnabled: true }
 }]);
 const { crawlSite } = require('./importer.cjs');
 const { listImportedSites, readImportedPage, saveImportedPage, exportImportedSite, createWebsite, createWebsitePage } = require('./import-library.cjs');
@@ -54,11 +57,24 @@ function safeWebUrl(value) {
     }
 }
 
+function safeBrowserUrl(value) {
+    const webUrl = safeWebUrl(value);
+    if (webUrl) return webUrl;
+    try {
+        const url = new URL(value);
+        if (url.protocol !== 'peanut-site:' || !/^[a-f0-9]{20}$/.test(url.hostname) ||
+            url.username || url.password || url.search) return null;
+        return url.href;
+    } catch {
+        return null;
+    }
+}
+
 function resolveInput(value) {
     const input = String(value || '').trim();
     if (!input) return null;
 
-    const direct = safeWebUrl(input);
+    const direct = safeBrowserUrl(input);
     if (direct) return direct;
 
     if (!/\s/.test(input) && /^[a-z0-9.-]+(?::\d+)?(?:\/[^\s]*)?$/i.test(input) &&
@@ -543,6 +559,60 @@ function registerAssetProtocol() {
     });
 }
 
+function registerAuthoredSiteProtocol() {
+    protocol.handle('peanut-site', async request => {
+        if (request.method !== 'GET') return new Response('', { status: 405 });
+        try {
+            const url = new URL(request.url);
+            const siteId = url.hostname;
+            if (!/^[a-f0-9]{20}$/.test(siteId) || url.username || url.password || url.search) {
+                return new Response('Not found', { status: 404 });
+            }
+            const siteDirectory = path.join(app.getPath('userData'), 'imports', siteId);
+            const manifest = JSON.parse(await fs.readFile(path.join(siteDirectory, 'manifest.json'), 'utf8'));
+            if (!manifest.authored || !Array.isArray(manifest.pages)) {
+                return new Response('Not found', { status: 404 });
+            }
+            const requestedPath = url.pathname.replace(/\\/+$/, '') || '/';
+            const entry = manifest.pages.find(item => {
+                if (!item || typeof item.id !== 'string' || !/^[a-f0-9]{64}$/.test(item.id)) return false;
+                try {
+                    const pageUrl = new URL(item.url);
+                    return pageUrl.protocol === 'peanut-site:' && pageUrl.hostname === siteId &&
+                        (pageUrl.pathname.replace(/\\/+$/, '') || '/') === requestedPath;
+                } catch {
+                    return false;
+                }
+            });
+            if (!entry) return new Response('Not found', { status: 404 });
+            const page = JSON.parse(await fs.readFile(path.join(siteDirectory, entry.id + '.json'), 'utf8'));
+            if (typeof page.html !== 'string') return new Response('Not found', { status: 404 });
+            let html = page.html;
+            for (const asset of Array.isArray(page.assets) ? page.assets : []) {
+                if (!asset || typeof asset.filename !== 'string' ||
+                    !/^[a-f0-9]{64}\\.[a-z0-9]{1,8}$/i.test(asset.filename)) continue;
+                const localUrl = 'peanut-asset://' + siteId + '/' + asset.filename + '?token=' + assetAccessToken;
+                const references = [...(Array.isArray(asset.references) ? asset.references : []), asset.url]
+                    .filter(value => typeof value === 'string' && value);
+                for (const reference of references) {
+                    const escaped = reference.replace(/&/g, '&amp;').replace(/"/g, '&quot;');
+                    html = html.split(reference).join(localUrl);
+                    if (escaped !== reference) html = html.split(escaped).join(localUrl);
+                }
+            }
+            const policy = '<meta http-equiv="Content-Security-Policy" content="default-src \'none\'; img-src peanut-asset: data:; style-src peanut-asset: \'unsafe-inline\'; font-src peanut-asset: data:; media-src peanut-asset:; connect-src \'none\'; object-src \'none\'; frame-src \'none\'; form-action \'none\'; base-uri peanut-site:">';
+            const base = '<base href="peanut-site://' + siteId + '/">';
+            if (/<head\\b[^>]*>/i.test(html)) html = html.replace(/<head\\b[^>]*>/i, match => match + policy + base);
+            else html = '<head>' + policy + base + '</head>' + html;
+            return new Response(html, {
+                headers: { 'Content-Type': 'text/html; charset=utf-8', 'X-Content-Type-Options': 'nosniff' }
+            });
+        } catch {
+            return new Response('Not found', { status: 404 });
+        }
+    });
+}
+
 async function verifyAssetProtocol() {
     const siteId = 'a'.repeat(20);
     const filename = 'b'.repeat(64) + '.txt';
@@ -619,7 +689,7 @@ function registerIpc() {
     });
     ipcMain.handle('peanut:open-saved-url', (event, value) => {
         if (!isTrustedUi(event)) throw new Error('Not authorised.');
-        const destination = safeWebUrl(value);
+        const destination = safeBrowserUrl(value);
         if (!destination) throw new Error('The saved address is not a valid HTTP or HTTPS URL.');
         if (!windowRef || windowRef.isDestroyed()) createWindow();
         return createTab(destination, true);
@@ -806,6 +876,7 @@ app.whenReady().then(async () => {
     await profileStore.load();
     Menu.setApplicationMenu(null);
     registerAssetProtocol();
+    registerAuthoredSiteProtocol();
     registerIpc();
     createWindow();
     if (process.env.PEANUT_CI_TEST === '1') {
