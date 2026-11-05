@@ -17,7 +17,13 @@
   </header>
   <main class="workspace">
     <section class="column sites-column">
-      <h2>Websites</h2>
+      <section class="batch-import">
+        <h2>Import websites</h2>
+        <textarea id="batch-sites" rows="4" placeholder="Enter one website address per line"></textarea>
+        <button id="batch-import" type="button">Import listed websites</button>
+        <p id="batch-status" class="item-subtitle">Up to 10 websites per batch.</p>
+      </section>
+      <h2>Imported websites</h2>
       <div id="sites" class="item-list" aria-label="Imported websites"></div>
       <section class="saved-section">
         <h2>Bookmarks</h2>
