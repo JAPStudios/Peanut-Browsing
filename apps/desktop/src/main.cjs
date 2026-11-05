@@ -573,13 +573,13 @@ function registerAuthoredSiteProtocol() {
             if (!manifest.authored || !Array.isArray(manifest.pages)) {
                 return new Response('Not found', { status: 404 });
             }
-            const requestedPath = url.pathname.replace(/\\/+$/, '') || '/';
+            const requestedPath = url.pathname.replace(/\/+$/, '') || '/';
             const entry = manifest.pages.find(item => {
                 if (!item || typeof item.id !== 'string' || !/^[a-f0-9]{64}$/.test(item.id)) return false;
                 try {
                     const pageUrl = new URL(item.url);
                     return pageUrl.protocol === 'peanut-site:' && pageUrl.hostname === siteId &&
-                        (pageUrl.pathname.replace(/\\/+$/, '') || '/') === requestedPath;
+                        (pageUrl.pathname.replace(/\/+$/, '') || '/') === requestedPath;
                 } catch {
                     return false;
                 }
@@ -590,7 +590,7 @@ function registerAuthoredSiteProtocol() {
             let html = page.html;
             for (const asset of Array.isArray(page.assets) ? page.assets : []) {
                 if (!asset || typeof asset.filename !== 'string' ||
-                    !/^[a-f0-9]{64}\\.[a-z0-9]{1,8}$/i.test(asset.filename)) continue;
+                    !/^[a-f0-9]{64}\.[a-z0-9]{1,8}$/i.test(asset.filename)) continue;
                 const localUrl = 'peanut-asset://' + siteId + '/' + asset.filename + '?token=' + assetAccessToken;
                 const references = [...(Array.isArray(asset.references) ? asset.references : []), asset.url]
                     .filter(value => typeof value === 'string' && value);
@@ -602,7 +602,7 @@ function registerAuthoredSiteProtocol() {
             }
             const policy = '<meta http-equiv="Content-Security-Policy" content="default-src \'none\'; img-src peanut-asset: data:; style-src peanut-asset: \'unsafe-inline\'; font-src peanut-asset: data:; media-src peanut-asset:; connect-src \'none\'; object-src \'none\'; frame-src \'none\'; form-action \'none\'; base-uri peanut-site:">';
             const base = '<base href="peanut-site://' + siteId + '/">';
-            if (/<head\\b[^>]*>/i.test(html)) html = html.replace(/<head\\b[^>]*>/i, match => match + policy + base);
+            if (/<head\b[^>]*>/i.test(html)) html = html.replace(/<head\b[^>]*>/i, match => match + policy + base);
             else html = '<head>' + policy + base + '</head>' + html;
             return new Response(html, {
                 headers: { 'Content-Type': 'text/html; charset=utf-8', 'X-Content-Type-Options': 'nosniff' }
