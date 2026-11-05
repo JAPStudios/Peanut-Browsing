@@ -1,5 +1,8 @@
 const path = require('node:path');
 const crypto = require('node:crypto');
+const fs = require('node:fs/promises');
+const fetch = require('cross-fetch');
+const { ElectronBlocker } = require('@ghostery/adblocker-electron');
 const { app, BaseWindow, BrowserWindow, WebContentsView, ipcMain, Menu, session } = require('electron');
 const { crawlSite } = require('./importer.cjs');
 const { listImportedSites, readImportedPage, saveImportedPage } = require('./import-library.cjs');
@@ -11,6 +14,8 @@ const SEARCH_TEMPLATE = process.env.PEANUT_SEARCH_URL || 'http://127.0.0.1:8080/
 let windowRef;
 let chromeView;
 let libraryWindow = null;
+let adblocker = null;
+let protectionStatus = 'initializing';
 let activeTabId = null;
 let nextTabId = 1;
 const tabs = new Map();
@@ -64,7 +69,8 @@ function browserState() {
         })),
         canGoBack: active ? active.view.webContents.navigationHistory.canGoBack() : false,
         canGoForward: active ? active.view.webContents.navigationHistory.canGoForward() : false,
-        loading: active ? Boolean(active.loading) : false
+        loading: active ? Boolean(active.loading) : false,
+        trackingProtection: protectionStatus
     };
 }
 
@@ -179,6 +185,13 @@ function createTab(destination = null, activate = true, isPrivate = false) {
     });
     const tab = { id, view, title: isPrivate ? 'Private Tab' : 'New Tab', url: '', loading: false, private: isPrivate, partition };
     tabs.set(id, tab);
+    if (adblocker) {
+        try {
+            adblocker.enableBlockingInSession(session.fromPartition(partition));
+        } catch (error) {
+            console.error('Peanut Browsing could not enable tracking protection for a new tab:', error);
+        }
+    }
     attachTabEvents(tab);
 
     if (activate) switchTab(id);
@@ -218,6 +231,13 @@ function closeTab(id) {
     tab.view.webContents.close();
     if (tab.private) {
         const privateSession = session.fromPartition(tab.partition);
+        if (adblocker) {
+            try {
+                adblocker.disableBlockingInSession(privateSession);
+            } catch {
+                // The blocker may not have initialized for this private session.
+            }
+        }
         Promise.all([
             privateSession.clearStorageData(),
             privateSession.clearCache(),
@@ -247,6 +267,25 @@ function navigateActive(input) {
     });
     publishState();
     return true;
+}
+
+async function loadTrackingProtection() {
+    try {
+        const cachePath = path.join(app.getPath('userData'), 'tracking-filters.bin');
+        adblocker = await ElectronBlocker.fromPrebuiltAdsAndTracking(fetch, {
+            path: cachePath,
+            read: fs.readFile,
+            write: fs.writeFile
+        });
+        for (const tab of tabs.values()) {
+            adblocker.enableBlockingInSession(session.fromPartition(tab.partition));
+        }
+        protectionStatus = 'enabled';
+    } catch (error) {
+        protectionStatus = 'unavailable';
+        console.error('Peanut Browsing tracking protection could not initialise:', error);
+    }
+    publishState();
 }
 
 function createLibraryWindow() {
@@ -393,6 +432,7 @@ function createWindow() {
 app.whenReady().then(() => {
     Menu.setApplicationMenu(null);
     createWindow();
+    loadTrackingProtection();
     app.on('activate', () => {
         if (!windowRef || windowRef.isDestroyed()) createWindow();
     });
