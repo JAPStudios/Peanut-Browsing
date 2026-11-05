@@ -17,7 +17,7 @@ function safeBrowserUrl(value) {
     try {
         const url = new URL(value);
         if (url.protocol !== 'peanut-site:' || !/^[a-f0-9]{20}$/.test(url.hostname) ||
-            url.username || url.password || url.search) return null;
+            url.username || url.password || url.search.length > 2048) return null;
         return url.href;
     } catch {
         return null;
