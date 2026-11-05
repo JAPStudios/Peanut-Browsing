@@ -3,7 +3,7 @@ const crypto = require('node:crypto');
 const fs = require('node:fs/promises');
 const fetch = require('cross-fetch');
 const { ElectronBlocker, adsAndTrackingLists } = require('@ghostery/adblocker-electron');
-const { app, BaseWindow, BrowserWindow, WebContentsView, ipcMain, Menu, session } = require('electron');
+const { app, BaseWindow, BrowserWindow, WebContentsView, ipcMain, Menu, session, dialog } = require('electron');
 const { crawlSite } = require('./importer.cjs');
 const { listImportedSites, readImportedPage, saveImportedPage } = require('./import-library.cjs');
 const { createProfileStore, normalizeUrl } = require('./profile-store.cjs');
@@ -19,9 +19,11 @@ let adblocker = null;
 let protectionStatus = 'initializing';
 let profileStore = null;
 let importInProgress = false;
+let downloadStatus = 'Downloads ready';
 let activeTabId = null;
 let nextTabId = 1;
 const tabs = new Map();
+const downloadSessions = new WeakSet();
 
 function safeWebUrl(value) {
     try {
@@ -74,6 +76,7 @@ function browserState() {
         canGoForward: active ? active.view.webContents.navigationHistory.canGoForward() : false,
         loading: active ? Boolean(active.loading) : false,
         trackingProtection: protectionStatus,
+        downloadStatus,
         isBookmarked: Boolean(active && profileStore &&
             profileStore.getState().bookmarks.some(item => item.url === normalizeUrl(active.url)))
     };
@@ -97,6 +100,60 @@ function layoutViews() {
             height: Math.max(0, height - TOOLBAR_HEIGHT)
         });
     }
+}
+
+function attachDownloadHandler(partition) {
+    const downloadSession = session.fromPartition(partition);
+    if (downloadSessions.has(downloadSession)) return;
+    downloadSessions.add(downloadSession);
+
+    downloadSession.on('will-download', (event, item) => {
+        const filename = item.getFilename();
+        const defaultPath = path.join(app.getPath('downloads'), filename);
+        item.pause();
+        downloadStatus = 'Choose a location for ' + filename;
+        publishState();
+
+        dialog.showSaveDialog(windowRef && !windowRef.isDestroyed() ? windowRef : undefined, {
+            title: 'Save download',
+            defaultPath,
+            buttonLabel: 'Save'
+        }).then(result => {
+            if (result.canceled || !result.filePath) {
+                item.cancel();
+                downloadStatus = 'Download cancelled';
+                publishState();
+                return;
+            }
+            item.setSavePath(result.filePath);
+            downloadStatus = 'Downloading ' + filename;
+            publishState();
+            item.resume();
+        }).catch(error => {
+            item.cancel();
+            downloadStatus = 'Download cancelled';
+            console.error('Download destination could not be selected:', error);
+            publishState();
+        });
+
+        item.on('updated', (_event, state) => {
+            if (state === 'interrupted') {
+                downloadStatus = 'Download interrupted: ' + filename;
+            } else {
+                const total = item.getTotalBytes();
+                const received = item.getReceivedBytes();
+                const percent = total > 0 ? Math.floor(received / total * 100) : 0;
+                downloadStatus = 'Downloading ' + filename + ' (' + percent + '%)';
+            }
+            publishState();
+        });
+        item.once('done', (_event, state) => {
+            downloadStatus = state === 'completed'
+                ? 'Download saved: ' + filename
+                : (state === 'cancelled' ? 'Download cancelled' : 'Download failed: ' + filename);
+            publishState();
+        });
+    });
 }
 
 function attachTabEvents(tab) {
@@ -202,6 +259,7 @@ function createTab(destination = null, activate = true, isPrivate = false) {
     });
     const tab = { id, view, title: isPrivate ? 'Private Tab' : 'New Tab', url: '', loading: false, private: isPrivate, partition };
     tabs.set(id, tab);
+    attachDownloadHandler(partition);
     if (adblocker) {
         try {
             adblocker.enableBlockingInSession(session.fromPartition(partition));
