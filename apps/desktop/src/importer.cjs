@@ -121,7 +121,7 @@ async function fetchLimitedText(browserSession, value, limit) {
     }
 }
 
-async function discoverSitemapPages(browserSession, origin) {
+async function discoverSitemapPages(browserSession, origin, pathPrefix = '/') {
     const sitemapQueue = [];
     const queuedSitemaps = new Set();
     const robotsUrl = new URL('/robots.txt', origin).href;
@@ -155,7 +155,7 @@ async function discoverSitemapPages(browserSession, origin) {
 
         const isIndex = /<(?:[\\w.-]+:)?sitemapindex\\b/i.test(xml);
         for (const location of extractSitemapLocations(xml)) {
-            const normalized = normalizeHttpUrl(location, origin);
+            const normalized = normalizeHttpUrl(location, origin, isIndex ? '/' : pathPrefix);
             if (!normalized) continue;
             if (isIndex) {
                 if (checkedSitemaps.size + sitemapQueue.length < MAX_SITEMAPS &&
@@ -251,7 +251,11 @@ async function crawlSite(startAddress, onProgress = () => {}) {
     await assertPublicHostname(start.hostname);
 
     const origin = start.origin;
-    const domainDirectory = fingerprint(origin).slice(0, 20);
+    const isWixSharedHost = start.hostname === 'wixsite.com' || start.hostname.endsWith('.wixsite.com');
+    const firstPathSegment = start.pathname.split('/').filter(Boolean)[0];
+    const pathPrefix = isWixSharedHost && firstPathSegment ? '/' + firstPathSegment : '/';
+    const websiteUrl = origin + (pathPrefix === '/' ? '' : pathPrefix);
+    const domainDirectory = fingerprint(origin + pathPrefix).slice(0, 20);
     const importDirectory = path.join(app.getPath('userData'), 'imports', domainDirectory);
     await fs.mkdir(importDirectory, { recursive: true });
 
@@ -291,7 +295,7 @@ async function crawlSite(startAddress, onProgress = () => {}) {
     const assetState = { byUrl: new Map(), pending: new Map(), totalBytes: 0, reservedBytes: 0 };
 
     onProgress({ status: 'discovering-sitemaps', websiteUrl: origin, completed: 0, limit: MAX_PAGES });
-    const sitemapDiscovery = await discoverSitemapPages(browserSession, origin);
+    const sitemapDiscovery = await discoverSitemapPages(browserSession, origin, pathPrefix);
     for (const sitemapPage of sitemapDiscovery.pages) {
         if (queued.size >= MAX_PAGES * 8) break;
         if (!queued.has(sitemapPage)) {
@@ -309,7 +313,7 @@ async function crawlSite(startAddress, onProgress = () => {}) {
             try {
                 await withTimeout(contents.loadURL(address), PAGE_TIMEOUT_MS, () => contents.stop());
                 const extracted = await extractPage(browser);
-                const finalUrl = normalizeHttpUrl(extracted.url, origin);
+                const finalUrl = normalizeHttpUrl(extracted.url, origin, pathPrefix);
                 if (!finalUrl) {
                     errors.push({ url: address, reason: 'The page redirected outside the starting website.' });
                     continue;
@@ -336,7 +340,7 @@ async function crawlSite(startAddress, onProgress = () => {}) {
 
                 for (const link of extracted.links || []) {
                     if (queued.size >= MAX_PAGES * 8) break;
-                    const next = normalizeHttpUrl(link, origin);
+                    const next = normalizeHttpUrl(link, origin, pathPrefix);
                     if (!next || visited.has(next.href) || queued.has(next.href)) continue;
                     queued.add(next.href);
                     queue.push(next.href);
@@ -347,7 +351,7 @@ async function crawlSite(startAddress, onProgress = () => {}) {
         }
 
         const manifest = {
-            websiteUrl: origin,
+            websiteUrl,
             startUrl: start.href,
             importedAt: new Date().toISOString(),
             pageCount: saved.length,
@@ -363,7 +367,7 @@ async function crawlSite(startAddress, onProgress = () => {}) {
 
         const result = {
             status: queue.length > 0 ? 'limit-reached' : 'complete',
-            websiteUrl: origin,
+            websiteUrl,
             pageCount: saved.length,
             errorCount: errors.length,
             sitemapCount: sitemapDiscovery.sitemapCount,
