@@ -50,17 +50,26 @@ async function extractPage(windowRef) {
             links: Array.from(document.querySelectorAll('a[href]'))
                 .slice(0, ${MAX_LINKS_PER_PAGE})
                 .map(link => link.href),
-            assets: Array.from(document.querySelectorAll('img[src], source[src], video[poster], audio[src], link[href], script[src]'))
-                .slice(0, 100)
-                .flatMap(element => ['src', 'href', 'poster']
-                    .filter(attribute => element.hasAttribute(attribute))
-                    .map(attribute => ({
-                        url: attribute === 'href'
-                            ? element.href
-                            : (attribute === 'poster' ? element.poster : (element.currentSrc || element.src)),
-                        reference: element.getAttribute(attribute)
-                    })))
-                .filter(asset => asset.url)
+            assets: [
+                ...Array.from(document.querySelectorAll('img[src], source[src], video[poster], audio[src], link[href], script[src]'))
+                    .slice(0, 100)
+                    .flatMap(element => ['src', 'href', 'poster']
+                        .filter(attribute => element.hasAttribute(attribute))
+                        .map(attribute => ({
+                            url: attribute === 'href'
+                                ? element.href
+                                : (attribute === 'poster' ? element.poster : (element.currentSrc || element.src)),
+                            reference: element.getAttribute(attribute)
+                        }))),
+                ...Array.from(document.querySelectorAll('img[srcset], source[srcset]'))
+                    .flatMap(element => (element.getAttribute('srcset') || '').split(',')
+                        .map(candidate => candidate.trim().split(' ')[0])
+                        .filter(reference => reference && !reference.startsWith('data:'))
+                        .map(reference => ({
+                            url: new URL(reference, document.baseURI).href,
+                            reference
+                        })))
+            ].filter(asset => asset.url)
         };
     })()`, false);
 }
