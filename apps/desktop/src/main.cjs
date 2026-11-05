@@ -22,7 +22,7 @@ const { createProfileStore, normalizeUrl } = require('./profile-store.cjs');
 
 const TOOLBAR_HEIGHT = 104;
 const NEW_TAB_FILE = path.join(__dirname, 'newtab.html');
-const SEARCH_TEMPLATE = process.env.PEANUT_SEARCH_URL || 'http://127.0.0.1:8080/search?q={query}';
+const SEARCH_TEMPLATE = process.env.PEANUT_SEARCH_URL || 'https://japbstudios.wixsite.com/peanut-browsing/_functions/peanutSearch?q={query}&page=1';
 
 let windowRef;
 let chromeView;
