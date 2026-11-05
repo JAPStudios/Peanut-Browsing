@@ -43,7 +43,9 @@ export function validateSearchRequest(query, page) {
     if (!normalizedQuery || normalizedQuery.length > MAX_QUERY_LENGTH) {
         throw new Error('Search phrases must contain between 1 and ' + MAX_QUERY_LENGTH + ' characters.');
     }
-    const normalizedPage = page === undefined ? 1 : Number(page);
+    const normalizedPage = page === undefined ? 1 :
+        (typeof page === 'number' ? page :
+            (typeof page === 'string' && /^[1-9]\\d*$/.test(page) ? Number(page) : NaN));
     if (!Number.isInteger(normalizedPage) || normalizedPage < 1 || normalizedPage > MAX_PAGE) {
         throw new Error('The requested search-results page is outside the supported range.');
     }
