@@ -6,10 +6,10 @@ This repository contains Peanut Browsing's Wix/Velo site code plus a separate de
 
 - `src/`: Wix/Velo website code, synced with the connected Wix site.
 - `apps/desktop/`: Electron desktop browser with multi-tab navigation, address/search input, same-origin website capture, plus an imported-page correction library.
-- `services/search/`: local SearXNG metasearch service with Valkey support.
+- `services/index/`: first-party website crawler and SQLite FTS5/BM25 index.\n- `services/search/`: SearXNG metasearch, production Nginx gateway, plus Valkey support.
 - `.github/workflows/peanut-desktop-syntax.yml`: source syntax checks, dependency resolution, plus search-service Compose validation.
 
-The desktop application has its own package. Its development requirements are Node.js 20 or newer, npm, Docker Compose for the local search service. The Wix/Velo project retains its separate Wix CLI workflow below.
+The website search combines Peanut Browsing's first-party index with SearXNG metasearch. The first-party crawler is deliberately bounded to submitted website origins, obeys `robots.txt`, and does not yet represent a continuously discovered, web-scale index. The desktop application has its own package. Its development requirements are Node.js 20 or newer, npm, Docker Compose for the local search service. The Wix/Velo project retains its separate Wix CLI workflow below.
 
 Connect your site to GitHub, develop in your favorite IDE, test your code in real time, and publish your site from the command line.
 
