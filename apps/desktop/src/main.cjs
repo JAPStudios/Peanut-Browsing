@@ -424,24 +424,24 @@ function registerIpc() {
         const results = [];
         importInProgress = true;
         try {
-        for (let index = 0; index < list.length; index += 1) {
-            const address = list[index];
-            const progressHandler = progress => {
-                const update = { ...progress, websiteIndex: index + 1, websiteTotal: list.length };
-                if (chromeView && !chromeView.webContents.isDestroyed()) {
-                    chromeView.webContents.send('peanut:import-progress', update);
+            for (let index = 0; index < list.length; index += 1) {
+                const address = list[index];
+                const progressHandler = progress => {
+                    const update = { ...progress, websiteIndex: index + 1, websiteTotal: list.length };
+                    if (chromeView && !chromeView.webContents.isDestroyed()) {
+                        chromeView.webContents.send('peanut:import-progress', update);
+                    }
+                    if (libraryWindow && !libraryWindow.isDestroyed()) {
+                        libraryWindow.webContents.send('peanut:import-progress', update);
+                    }
+                };
+                try {
+                    results.push(await crawlSite(address, progressHandler));
+                } catch (error) {
+                    results.push({ status: 'failed', websiteUrl: address, error: error.message || 'Import failed.' });
                 }
-                if (libraryWindow && !libraryWindow.isDestroyed()) {
-                    libraryWindow.webContents.send('peanut:import-progress', update);
-                }
-            };
-            try {
-                results.push(await crawlSite(address, progressHandler));
-            } catch (error) {
-                results.push({ status: 'failed', websiteUrl: address, error: error.message || 'Import failed.' });
             }
-        }
-        return results;
+            return results;
         } finally {
             importInProgress = false;
         }
