@@ -13,6 +13,7 @@ contextBridge.exposeInMainWorld('peanutBrowser', {
     listImports: () => ipcRenderer.invoke('peanut:list-imports'),
     readImportedPage: input => ipcRenderer.invoke('peanut:read-imported-page', input),
     saveImportedPage: input => ipcRenderer.invoke('peanut:save-imported-page', input),
+    exportSite: siteId => ipcRenderer.invoke('peanut:export-site', siteId),
     newTab: () => ipcRenderer.invoke('peanut:new-tab'),
     newPrivateTab: () => ipcRenderer.invoke('peanut:new-private-tab'),
     closeTab: id => ipcRenderer.invoke('peanut:close-tab', id),
