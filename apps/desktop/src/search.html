@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; object-src 'none'; base-uri 'none';">
+  <title>Peanut Search</title>
+  <link rel="stylesheet" href="search.css">
+</head>
+<body>
+  <main class="search-page">
+    <header class="search-header">
+      <a class="brand" href="newtab.html" aria-label="Peanut Browsing home">Peanut Browsing</a>
+      <p class="product-label">Independent search</p>
+      <h1 id="query">Search</h1>
+      <p id="summary" class="summary" role="status">Loading results…</p>
+    </header>
+    <section id="results" class="results" aria-live="polite"></section>
+    <p id="empty" class="empty" hidden>No matching pages were found in the Peanut Index.</p>
+    <p id="error" class="error" hidden></p>
+    <footer>Results are retrieved from Peanut Browsing’s first-party index.</footer>
+  </main>
+  <script src="search.js"></script>
+</body>
+</html>
