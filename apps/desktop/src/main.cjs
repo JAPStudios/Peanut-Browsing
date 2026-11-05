@@ -255,7 +255,7 @@ function attachTabEvents(tab) {
         } else {
             tab.searchQuery = null;
             tab.url = url;
-            if (profileStore && /^https?:\\/\\//i.test(url)) {
+            if (profileStore && (url.startsWith('http://') || url.startsWith('https://'))) {
                 profileStore.recordVisit(url, tab.title, tab.private)
                     .then(publishState).catch(error => console.error('Could not record browsing history:', error));
             }
