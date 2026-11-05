@@ -1,7 +1,7 @@
 import { fetch } from 'wix-fetch';
 import { secrets } from 'wix-secrets-backend.v2';
 import { elevate } from 'wix-auth';
-import { normalizeSearchResults, normalizeTotalResults, validateSearchEndpoint, validateSearchRequest } from 'backend/searchUtils';
+import { buildSearchServiceUrl, normalizeSearchResults, normalizeTotalResults, validateSearchEndpoint, validateSearchRequest } from 'backend/searchUtils';
 
 const elevatedGetSecretValue = elevate(secrets.getSecretValue);
 const SEARCH_ENDPOINT_SECRET = 'PEANUT_SEARCH_API_URL';
@@ -23,7 +23,7 @@ export async function searchWeb(query, page) {
     const request = validateSearchRequest(query, page);
     const endpoint = validateSearchEndpoint(await readSecret(SEARCH_ENDPOINT_SECRET));
     const apiKey = await readSecret(SEARCH_API_KEY_SECRET);
-    const url = new URL('/index/search', endpoint.origin);
+    const url = buildSearchServiceUrl(endpoint, 'search');
     url.searchParams.set('q', request.query);
     url.searchParams.set('limit', '20');
     url.searchParams.set('offset', String((request.page - 1) * 20));
@@ -37,14 +37,10 @@ export async function searchWeb(query, page) {
     } catch (error) {
         throw new Error('Peanut Browsing could not reach its first-party index. Try again shortly.');
     }
-    if (!response.ok) {
-        throw new Error('Peanut Browsing first-party index returned HTTP ' + response.status + '.');
-    }
+    if (!response.ok) throw new Error('Peanut Browsing first-party index returned HTTP ' + response.status + '.');
 
     let payload;
-    try {
-        payload = await response.json();
-    } catch (error) {
+    try { payload = await response.json(); } catch (error) {
         throw new Error('Peanut Browsing first-party index returned unreadable data.');
     }
     if (!payload || payload.status !== 'ok' || !Array.isArray(payload.results)) {
@@ -52,19 +48,12 @@ export async function searchWeb(query, page) {
     }
 
     const results = normalizeSearchResults(payload.results.map(result => ({
-        ...result,
-        content: typeof result.snippet === 'string' ? result.snippet : ''
+        ...result, content: typeof result.snippet === 'string' ? result.snippet : ''
     })));
     const totalResults = normalizeTotalResults(payload.totalResults);
     return {
-        status: 'ok',
-        query: request.query,
-        page: request.page,
-        results,
-        resultCount: results.length,
-        totalResults,
-        hasNextPage: totalResults === null
-            ? results.length === 20
-            : (request.page * 20) < totalResults
+        status: 'ok', query: request.query, page: request.page, results,
+        resultCount: results.length, totalResults,
+        hasNextPage: totalResults === null ? results.length === 20 : request.page * 20 < totalResults
     };
 }

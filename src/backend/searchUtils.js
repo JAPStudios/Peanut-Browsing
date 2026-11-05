@@ -17,26 +17,20 @@ function isNonPublicIpv4(hostname) {
     return ranges.some(([network, prefix]) => {
         const base = network.split('.').map(Number)
             .reduce((value, octet) => value * 256 + octet, 0) >>> 0;
-        const mask = prefix === 0 ? 0 : (0xffffffff << (32 - prefix)) >>> 0;
+        const mask = (0xffffffff << (32 - prefix)) >>> 0;
         return (address & mask) === (base & mask);
     });
 }
 
 export function validatePublicWebsiteUrl(value) {
-    if (typeof value !== 'string' || value.length > 2048) {
-        throw new Error('Enter a valid public website address.');
-    }
+    if (typeof value !== 'string' || value.length > 2048) throw new Error('Enter a valid public website address.');
     let url;
-    try { url = new URL(value.trim()); } catch (error) {
-        throw new Error('Enter a valid public website address.');
-    }
+    try { url = new URL(value.trim()); } catch (error) { throw new Error('Enter a valid public website address.'); }
     const hostname = url.hostname.toLowerCase().replace(/^\[|\]$/g, '');
-    if (!['http:', 'https:'].includes(url.protocol) || !hostname ||
-        url.username || url.password || hostname === 'localhost' ||
-        hostname.endsWith('.localhost') || hostname.endsWith('.local') ||
-        hostname.endsWith('.internal') || hostname.endsWith('.test') ||
-        hostname.endsWith('.invalid') || hostname.includes(':') ||
-        isNonPublicIpv4(hostname)) {
+    if (!['http:', 'https:'].includes(url.protocol) || !hostname || url.username || url.password ||
+        hostname === 'localhost' || hostname.endsWith('.localhost') || hostname.endsWith('.local') ||
+        hostname.endsWith('.internal') || hostname.endsWith('.test') || hostname.endsWith('.invalid') ||
+        hostname.includes(':') || isNonPublicIpv4(hostname)) {
         throw new Error('Only public HTTP or HTTPS websites can be added to the Peanut Index.');
     }
     url.hash = '';
@@ -62,7 +56,7 @@ export function validateSearchEndpoint(value) {
     try { endpoint = new URL(value.trim()); } catch (error) {
         throw new Error('The search service address is not configured correctly.');
     }
-    const hostname = endpoint.hostname.toLowerCase().replace(/^\\[|\\]$/g, '');
+    const hostname = endpoint.hostname.toLowerCase().replace(/^\[|\]$/g, '');
     if (endpoint.protocol !== 'https:' || endpoint.username || endpoint.password ||
         hostname === 'localhost' || hostname.endsWith('.localhost') || hostname.endsWith('.local') ||
         hostname.endsWith('.internal') || hostname.endsWith('.test') || hostname.endsWith('.invalid') ||
@@ -70,7 +64,17 @@ export function validateSearchEndpoint(value) {
         throw new Error('The search service must use a public HTTPS address.');
     }
     endpoint.hash = '';
+    endpoint.search = '';
+    endpoint.pathname = endpoint.pathname.replace(/\/+$/, '') + '/';
     return endpoint;
+}
+
+export function buildSearchServiceUrl(endpoint, route) {
+    if (!(endpoint instanceof URL) || !['search', 'crawl'].includes(route)) {
+        throw new Error('A validated search endpoint and supported route are required.');
+    }
+    const basePath = endpoint.pathname.replace(/\/+$/, '');
+    return new URL(basePath + '/index/' + route, endpoint.origin);
 }
 
 export function normalizeSearchResults(results) {
@@ -88,12 +92,8 @@ export function normalizeSearchResults(results) {
         const engine = typeof result.engine === 'string' ? result.engine.trim().slice(0, 80) : '';
         const score = Number(result.score);
         normalized.push({
-            title: title || url.hostname,
-            url: url.href,
-            displayUrl: url.hostname + url.pathname,
-            snippet: content,
-            engine,
-            score: Number.isFinite(score) ? score : null
+            title: title || url.hostname, url: url.href, displayUrl: url.hostname + url.pathname,
+            snippet: content, engine, score: Number.isFinite(score) ? score : null
         });
         if (normalized.length >= RESULTS_PER_PAGE) break;
     }

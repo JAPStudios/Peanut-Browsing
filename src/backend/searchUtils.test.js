@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { normalizeSearchResults, normalizeTotalResults, validatePublicWebsiteUrl, validateSearchEndpoint, validateSearchRequest } from './searchUtils.js';
+import { buildSearchServiceUrl, normalizeSearchResults, normalizeTotalResults, validatePublicWebsiteUrl, validateSearchEndpoint, validateSearchRequest } from './searchUtils.js';
 
 test('normalizes search phrases and validates page numbers', () => {
     assert.deepEqual(validateSearchRequest('  peanut   browsing ', 2), { query: 'peanut browsing', page: 2 });
@@ -15,6 +15,16 @@ test('accepts only public HTTPS search-service endpoints', () => {
         'https://127.0.0.1', 'https://192.168.1.10', 'https://user:pass@search.example.org']) {
         assert.throws(() => validateSearchEndpoint(endpoint), /public HTTPS/);
     }
+});
+
+test('builds first-party routes while preserving an optional gateway path', () => {
+    assert.equal(buildSearchServiceUrl(validateSearchEndpoint('https://search.example.org'), 'search').href,
+        'https://search.example.org/index/search');
+    assert.equal(buildSearchServiceUrl(validateSearchEndpoint('https://example.org/peanut/api/'), 'search').href,
+        'https://example.org/peanut/api/index/search');
+    assert.equal(buildSearchServiceUrl(validateSearchEndpoint('https://example.org/peanut/api?ignored=yes#fragment'), 'crawl').href,
+        'https://example.org/peanut/api/index/crawl');
+    assert.throws(() => buildSearchServiceUrl(validateSearchEndpoint('https://search.example.org'), 'admin'));
 });
 
 test('normalizes, deduplicates and filters unsafe search results', () => {
@@ -52,9 +62,7 @@ test('rejects non-public IPv4 ranges when validating submitted websites', () => 
         'http://192.0.0.8', 'http://192.0.2.1', 'http://192.168.1.1',
         'http://198.18.0.1', 'http://198.51.100.1', 'http://203.0.113.1',
         'http://224.0.0.1', 'http://240.0.0.1', 'http://[::1]/'
-    ]) {
-        assert.throws(() => validatePublicWebsiteUrl(address), /Only public HTTP or HTTPS/);
-    }
+    ]) assert.throws(() => validatePublicWebsiteUrl(address), /Only public HTTP or HTTPS/);
     assert.equal(validatePublicWebsiteUrl('https://example.org/page#section'), 'https://example.org/page');
     assert.equal(validatePublicWebsiteUrl('http://8.8.8.8/'), 'http://8.8.8.8/');
     assert.equal(validatePublicWebsiteUrl('http://192.0.1.1/'), 'http://192.0.1.1/');
@@ -64,7 +72,5 @@ test('rejects non-public IPv4 ranges for the configured search service', () => {
     for (const address of [
         'https://100.64.0.1', 'https://192.0.2.1', 'https://198.18.0.1',
         'https://198.51.100.1', 'https://203.0.113.1', 'https://224.0.0.1'
-    ]) {
-        assert.throws(() => validateSearchEndpoint(address), /public HTTPS/);
-    }
+    ]) assert.throws(() => validateSearchEndpoint(address), /public HTTPS/);
 });
