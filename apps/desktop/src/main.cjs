@@ -442,6 +442,9 @@ function registerIpc() {
             }
         }
         return results;
+        } finally {
+            importInProgress = false;
+        }
     });
     ipcMain.handle('peanut:new-tab', event => {
         if (!isChrome(event)) throw new Error('Not authorised.');
