@@ -16,7 +16,7 @@ protocol.registerSchemesAsPrivileged([{
     }
 }]);
 const { crawlSite } = require('./importer.cjs');
-const { listImportedSites, readImportedPage, saveImportedPage, exportImportedSite } = require('./import-library.cjs');
+const { listImportedSites, readImportedPage, saveImportedPage, exportImportedSite, createWebsite, createWebsitePage } = require('./import-library.cjs');
 const { createProfileStore, normalizeUrl } = require('./profile-store.cjs');
 
 const TOOLBAR_HEIGHT = 104;
@@ -514,6 +514,14 @@ function registerIpc() {
         const result = await profileStore.clearHistory();
         publishState();
         return result;
+    });
+    ipcMain.handle('peanut:create-website', async (event, input) => {
+        if (!isTrustedUi(event)) throw new Error('Not authorised.');
+        return createWebsite(importRoot(), input);
+    });
+    ipcMain.handle('peanut:create-website-page', async (event, input) => {
+        if (!isTrustedUi(event)) throw new Error('Not authorised.');
+        return createWebsitePage(importRoot(), input);
     });
     ipcMain.handle('peanut:list-imports', event => {
         if (!isTrustedUi(event)) throw new Error('Not authorised.');
