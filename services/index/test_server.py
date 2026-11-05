@@ -1,5 +1,7 @@
 """Tests for public-address-pinned crawler connections."""
+import os
 import socket
+import tempfile
 import unittest
 from unittest.mock import Mock, patch
 
@@ -43,8 +45,15 @@ if __name__ == "__main__":
 
 
 class FirstPartySearchTests(unittest.TestCase):
+    def setUp(self):
+        self.temp = tempfile.TemporaryDirectory()
+        self.store = IndexStore(os.path.join(self.temp.name, "index.sqlite"))
+
+    def tearDown(self):
+        self.temp.cleanup()
+
     def test_unquoted_terms_require_all_terms(self):
-        store = IndexStore(":memory:")
+        store = self.store
         store.upsert("https://peanut.example/browser", "Peanut Browser", "A browser built for independent websites")
         store.upsert("https://peanut.example/butter", "Peanut Butter", "A guide to peanut butter")
         result = store.search("peanut browser")
