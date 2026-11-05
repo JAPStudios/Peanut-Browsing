@@ -136,7 +136,7 @@ function attachTabEvents(tab) {
             if (chromeView && !chromeView.webContents.isDestroyed()) {
                 chromeView.webContents.send('peanut:focus-address');
             }
-        } else if (modifier && key === 't' && input.shift) {
+        } else if (modifier && key === 'n' && input.shift) {
             event.preventDefault();
             createTab(null, true, true);
         } else if (modifier && key === 't') {
