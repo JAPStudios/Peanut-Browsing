@@ -1,115 +1,27 @@
-# The Backend Code Folder
+# Peanut Browsing
 
-This folder contains the backend code files for your site. These files correspond to the ones found in the [**Backend**](https://support.wix.com/en/article/velo-working-with-the-velo-sidebar#backend) section of the **Public & Backend** 
-![image](https://user-images.githubusercontent.com/89579857/184862813-e55cdd98-b723-4d64-b73c-593eb9af21c7.png) tab in the Velo sidebar. Add the following files to this folder to include them in your site:
-+ [**Web Modules:**](https://support.wix.com/en/article/velo-web-modules-calling-backend-code-from-the-frontend)  
-  These are files that allow you to expose functions in your site's backend that you can run in your frontend code. These files require a `.jsw` file extension.
-  >**Note:**  
-  >You can't change [web module permissions](https://support.wix.com/en/article/velo-about-web-module-permissions) in Wix editors when using Git Integration & Wix CLI. Instead, use the [permissions.json](#permissionsjson) file to set function permissions.
+This repository contains Peanut Browsing's Wix/Velo website code, a separate desktop browser application, and Peanut Browsing's first-party search index.
 
-+ **data.js**  
-  A file for [adding data hooks](https://support.wix.com/en/article/velo-using-data-hooks) to your site's collections.
+## Components
 
-+ **routers.js**  
-  A file for implementing [routing and sitemap](https://support.wix.com/en/article/velo-about-routers#routing-code) functionality for your site.
+- `src/`: Wix/Velo website code connected to the existing Peanut Browsing site.
+- `apps/desktop/`: Electron desktop browser with multi-tab navigation, address/search input, website importing, and an imported-page correction library.
+- `services/index/`: Peanut Browsing's own bounded web crawler and SQLite FTS5/BM25 search index.
+- `services/search/`: authenticated Nginx gateway for the first-party index.
+- `.github/workflows/peanut-desktop-syntax.yml`: source checks, tests, container build, and production gateway configuration validation.
 
-+ **events.js**  
-  A file for implementing your site's [backend event handlers](https://support.wix.com/en/article/velo-backend-events). 
+The website search adapter queries only the first-party Peanut Browsing index. It does not forward queries to SearXNG, Google, Bing, or another external search engine. The desktop results page supports bounded previous/next pagination and renders backend errors explicitly. The crawler currently indexes explicitly submitted public websites, follows links within each submitted website, and obeys `robots.txt`. It is not yet a continuously discovered web-scale index of the public internet.
 
-+ **http-functions.js**  
-  A file for implementing [HTTP endpoints](https://www.wix.com/velo/reference/wix-http-functions/introduction) that are exposed on your site.
+## Wix site development
 
-+ **jobs.config**  
-  A file for [scheduling recurring jobs](https://support.wix.com/en/article/velo-scheduling-recurring-jobs). Jobs consist of other backend code that's run at regular intervals.
-  
-+ **General backend files**  
-  JavaScript code files. You can import code from these files into any other backend file on your site. These files require a `.js` file extension.
+This repository is connected to the existing Peanut Browsing Wix site through Git Integration. The site tracks the repository's default branch. Committing backend code does not by itself prove that Wix has published the corresponding HTTP function; the published endpoint must be tested.
 
-Use the following syntax to import code from backend files: 
-```js 
-import { myFunctionName } from 'backend/myFileName';
-```  
-Trying to import from the relative path in your site's repo doesn't work.
+The Wix CLI supports local development and publishing from a terminal. See [Wix CLI documentation](https://dev.wix.com/docs/wix-cli/command-reference/introduction).
 
-Learn more about [this repo's file structure](https://support.wix.com/en/article/velo-understanding-your-sites-github-repository-beta).
+## Desktop development
 
-## permissions.json
-This file defines [permissions](https://support.wix.com/en/article/velo-about-web-module-permissions) for the functions in your web module files. The file contains a key, `"web-methods"`, whose value is an object that can contain keys named after the web module files in your `backend` folder. Name these keys with the following syntax: `"backend/{path to file}myFile.jsw"`. The value for each file name key is an object that can contain keys named after the functions in that file. Each function key has a value with the following format:
-```js
-"backend/myFile.jsw": {
-  "siteOwner" : {
-    "invoke" : // Boolean
-  },
-  "siteMember" : {
-    "invoke" : // Boolean
-  },
-  "anonymous" : {
-    "invoke" : // Boolean
-  }  
-}
-```
-These values reflect the different levels of web module function permissions. You can set them using the following options:
-| |`siteOwner`|`siteMember`|`anonymous`|
-|-|-----------|------------|-----------|
-|Owner-only access| `true` | `false` | `false`|
-|Site member access| `true` | `true` | `false`|
-|Anyone can access| `true` | `true`| `true`|
+The desktop application has its own package. Its development requirements are Node.js 20 or newer, npm, and Electron's supported build environment. Run the desktop tests from `apps/desktop/` with `npm test`.
 
-The `"web-methods"` object must also contain a `"*"` key. The value for this key defines the default permissions that are applied to any function whose permissions you don't set manually.
+## First-party search service
 
-Here is an example `permissions.json` file for a site with a backend file called `helperFunctions.jsw`. The file's functions are called `calculate`, `fetchData`, and `syncWithServer`. In this case anyone can call `calculate`, site members can call `syncWithServer`, and only site owners can call `fetchData`.
-
-```json
-{
-  "web-methods": {
-    "*": {
-      "*": {
-        "siteOwner": {
-          "invoke": true
-        },
-        "siteMember": {
-          "invoke": true
-        },
-        "anonymous": {
-          "invoke": true
-        }
-      }
-    },
-    "backend/helperFunctions.jsw": {
-      "calculate": {
-        "siteOwner": {
-          "invoke": true
-        },
-        "siteMember": {
-          "invoke": true
-        },
-        "anonymous": {
-          "invoke": true
-        }
-      },
-      "fetchData": {
-        "siteOwner": {
-          "invoke": true
-        },
-        "siteMember": {
-          "invoke": false
-        },
-        "anonymous": {
-          "invoke": false
-        }
-      },
-      "syncWithServer": {
-        "siteOwner": {
-          "invoke": true
-        },
-        "siteMember": {
-          "invoke": true
-        },
-        "anonymous": {
-          "invoke": false
-        }
-      }
-    }
-  }
-}
-```
+The production search stack runs the Peanut Browsing index service behind an authenticated Nginx gateway. It does not include an external metasearch engine. The gateway is bound to loopback and must sit behind HTTPS reverse proxy infrastructure before public use. See `src/backend/SEARCH.md` for the Wix integration contract and deployment requirements.

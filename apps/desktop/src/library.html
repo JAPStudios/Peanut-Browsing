@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:;">
+  <title>Peanut Browsing — Imported Sites</title>
+  <link rel="stylesheet" href="library.css">
+</head>
+<body>
+  <header class="library-header">
+    <div>
+      <h1>Imported websites</h1>
+      <p>Review captured pages, then correct their source markup or extracted text.</p>
+    </div>
+    <button id="refresh" type="button">Refresh library</button>
+  </header>
+  <main class="workspace">
+    <section class="column sites-column">
+      <section class="batch-import">
+        <h2>Create a website</h2>
+        <input id="new-site-name" type="text" maxlength="80" placeholder="Website name">
+        <button id="create-site" type="button">Create website</button>
+        <h2>Import websites</h2>
+        <textarea id="batch-sites" rows="4" placeholder="Enter one website address per line"></textarea>
+        <button id="batch-import" type="button">Import listed websites</button>
+        <button id="export-site" type="button" disabled>Export selected website</button>
+        <p id="batch-status" class="item-subtitle">Up to 10 websites per batch.</p>
+      </section>
+      <h2>Imported websites</h2>
+      <div id="sites" class="item-list" aria-label="Imported websites"></div>
+      <section class="saved-section">
+        <h2>Bookmarks</h2>
+        <div id="bookmarks" class="item-list" aria-label="Bookmarks"></div>
+      </section>
+      <section class="saved-section">
+        <div class="section-heading">
+          <h2>Recent history</h2>
+          <button id="clear-history" class="small-button" type="button">Clear</button>
+        </div>
+        <div id="history" class="item-list" aria-label="Recent history"></div>
+      </section>
+    </section>
+    <section class="column pages-column">
+      <h2>Pages</h2>
+      <div class="page-create">
+        <input id="new-page-path" type="text" maxlength="100" placeholder="Page path, e.g. about">
+        <button id="create-page" type="button" disabled>Add page</button>
+      </div>
+      <div id="pages" class="item-list" aria-label="Imported pages"></div>
+    </section>
+    <section class="editor-column">
+      <div id="empty-state" class="empty-state">
+        <h2>Select an imported page</h2>
+        <p>Import a website from the browser, then select a page to review its captured source.</p>
+      </div>
+      <form id="page-editor" hidden>
+        <div class="editor-heading">
+          <div>
+            <p id="page-url" class="page-url"></p>
+            <h2>Edit imported page</h2>
+            <p id="source-update-note" class="editor-note" hidden></p>
+          </div>
+          <div class="editor-actions">
+            <button id="restore-source" type="button" disabled>Restore original source</button>
+            <button id="save-page" type="submit">Save corrections</button>
+          </div>
+        </div>
+        <label for="title">Page title</label>
+        <input id="title" maxlength="512" type="text">
+        <label for="description">Meta description</label>
+        <textarea id="description" rows="2" maxlength="4000"></textarea>
+        <section class="content-builder" aria-labelledby="content-builder-heading">
+          <h3 id="content-builder-heading">Add a content block</h3>
+          <label for="block-type">Block type</label>
+          <select id="block-type">
+            <option value="heading">Heading</option>
+            <option value="subheading">Subheading</option>
+            <option value="paragraph">Paragraph</option>
+            <option value="quote">Quote</option>
+            <option value="list">Bullet list</option>
+            <option value="link">Link</option>
+          </select>
+          <label for="block-text">Text or one list item per line</label>
+          <textarea id="block-text" rows="3" maxlength="12000"></textarea>
+          <label for="block-url" id="block-url-label" hidden>Link address</label>
+          <input id="block-url" type="url" placeholder="https://example.com" hidden>
+          <button id="insert-block" type="button">Insert block into page</button>
+        </section>
+        <label for="html-source">HTML source with isolated preview</label>
+        <div class="source-preview">
+          <textarea id="html-source" class="source-editor" spellcheck="false"></textarea>
+          <iframe id="page-preview" sandbox="" referrerpolicy="no-referrer" title="Isolated imported-page preview"></iframe>
+        </div>
+        <label for="text-content">Extracted page text</label>
+        <textarea id="text-content" class="text-editor" spellcheck="true"></textarea>
+        <p id="asset-count" class="editor-note">Captured assets: 0</p>
+        <p class="editor-note">Source markup is stored as text. It is not executed or rendered by this editor.</p>
+      </form>
+    </section>
+  </main>
+  <footer id="status" role="status">Loading imported websites…</footer>
+  <script src="library.js"></script>
+</body>
+</html>
