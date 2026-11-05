@@ -43,6 +43,9 @@ export function validateSearchRequest(query, page) {
     if (!normalizedQuery || normalizedQuery.length > MAX_QUERY_LENGTH) {
         throw new Error('Search phrases must contain between 1 and ' + MAX_QUERY_LENGTH + ' characters.');
     }
+    if (!/[\\p{L}\\p{N}_]{2,}/u.test(normalizedQuery)) {
+        throw new Error('Enter at least one search term containing two or more characters.');
+    }
     const normalizedPage = page === undefined ? 1 :
         (typeof page === 'number' ? page :
             (typeof page === 'string' && /^[1-9]\d*$/.test(page) ? Number(page) : NaN));
