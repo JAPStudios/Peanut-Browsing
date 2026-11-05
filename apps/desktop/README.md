@@ -17,6 +17,8 @@ To use a different search service, set `PEANUT_SEARCH_URL` to an HTTP or HTTPS U
 
 The initial shell provides multi-tab navigation, an address/search bar, back/forward, reload/stop, persistent browser session storage, HTTP/HTTPS navigation, plus an isolated local browser-chrome renderer. Remote pages do not receive Node.js integration or the privileged preload bridge.
 
-The **Import site** control crawls same-origin links from the active page, captures page titles, descriptions, HTML and visible text, then writes a manifest plus individual page records under Electron's application data directory. It currently caps a run at 250 pages. It does not yet download referenced images, stylesheets, fonts or scripts; it does not rewrite or publish the source website. Imported markup is retained as source data, not executed as a local page.
+The **Import site** control crawls same-origin links from the active page, captures page titles, descriptions, HTML and visible text, then writes a manifest plus individual page records under Electron's application data directory. It currently caps a run at 250 attempted pages. The **Library** control lists imported websites, opens captured pages, then saves edits to page titles, descriptions, HTML source or extracted text. Imported markup is retained as source data, not executed as a local page.
+
+The importer does not yet download referenced images, stylesheets, fonts or scripts; it does not rewrite or publish the source website. The current editor changes stored source records only.
 
 This is an initial desktop client, not a finished browser. Downloads, bookmarks, history management, password management, synchronisation, extension compatibility, tracking protection, a visual imported-site editor, accessibility verification, updater, signed installers, macOS testing and Android implementation remain outstanding.
