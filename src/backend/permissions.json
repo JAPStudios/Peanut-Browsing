@@ -38,6 +38,19 @@
           "invoke": false
         }
       }
+    },
+    "backend/webSearch.jsw": {
+      "searchWeb": {
+        "siteOwner": {
+          "invoke": true
+        },
+        "siteMember": {
+          "invoke": true
+        },
+        "anonymous": {
+          "invoke": true
+        }
+      }
     }
   }
 }
