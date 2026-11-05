@@ -143,11 +143,19 @@ async function downloadAsset(browserSession, value, origin, directory, assetStat
             const declaredSize = Number(response.headers.get('content-length') || 0);
             if (declaredSize > MAX_ASSET_BYTES) return null;
             const bytes = await readLimitedBody(response, MAX_ASSET_BYTES);
-            if (!bytes || bytes.length === 0 || assetState.totalBytes + bytes.length > MAX_TOTAL_ASSET_BYTES) return null;
+            if (!bytes || bytes.length === 0 ||
+                assetState.totalBytes + assetState.reservedBytes + bytes.length > MAX_TOTAL_ASSET_BYTES) return null;
 
+            assetState.reservedBytes += bytes.length;
             const id = fingerprint(assetUrl.href);
             const filename = id + extensionForAsset(assetUrl.href, contentType);
-            await fs.writeFile(path.join(directory, filename), bytes);
+            try {
+                await fs.writeFile(path.join(directory, filename), bytes);
+            } catch (error) {
+                assetState.reservedBytes -= bytes.length;
+                throw error;
+            }
+            assetState.reservedBytes -= bytes.length;
             const record = {
                 id,
                 url: assetUrl.href,
@@ -224,7 +232,7 @@ async function crawlSite(startAddress, onProgress = () => {}) {
     const assetsDirectory = path.join(importDirectory, 'assets');
     await fs.mkdir(assetsDirectory, { recursive: true });
     const browserSession = contents.session;
-    const assetState = { byUrl: new Map(), pending: new Map(), totalBytes: 0 };
+    const assetState = { byUrl: new Map(), pending: new Map(), totalBytes: 0, reservedBytes: 0 };
 
     try {
         while (queue.length > 0 && visited.size < MAX_PAGES) {
