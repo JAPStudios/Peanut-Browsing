@@ -6,7 +6,8 @@ const {
     normalizeAssetUrl,
     decodeXml,
     extractSitemapLocations,
-    isPublicAddress
+    isPublicAddress,
+    assertPublicHostname
 } = require('../src/sitemap-utils.cjs');
 
 test('accepts same-origin HTTP addresses and strips fragments', () => {
@@ -78,4 +79,9 @@ test('enforces a site path boundary on shared hosting domains', () => {
         normalizeHttpUrl('https://tenant.wixsite.com/another-site/', 'https://tenant.wixsite.com', '/site'),
         null
     );
+});
+
+test('rejects local DNS names before importing', async () => {
+    await assert.rejects(assertPublicHostname('127.0.0.1'), /public DNS hostname/i);
+    await assert.rejects(assertPublicHostname('localhost'), /private, local or reserved/i);
 });
