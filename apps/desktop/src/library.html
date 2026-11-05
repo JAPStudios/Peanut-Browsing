@@ -41,8 +41,11 @@
         <input id="title" maxlength="512" type="text">
         <label for="description">Meta description</label>
         <textarea id="description" rows="2" maxlength="4000"></textarea>
-        <label for="html-source">HTML source</label>
-        <textarea id="html-source" class="source-editor" spellcheck="false"></textarea>
+        <label for="html-source">HTML source with isolated preview</label>
+        <div class="source-preview">
+          <textarea id="html-source" class="source-editor" spellcheck="false"></textarea>
+          <iframe id="page-preview" sandbox="" referrerpolicy="no-referrer" title="Isolated imported-page preview"></iframe>
+        </div>
         <label for="text-content">Extracted page text</label>
         <textarea id="text-content" class="text-editor" spellcheck="true"></textarea>
         <p class="editor-note">Source markup is stored as text. It is not executed or rendered by this editor.</p>
