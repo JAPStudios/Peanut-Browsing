@@ -114,11 +114,15 @@ function attachDownloadHandler(partition) {
         downloadStatus = 'Choose a location for ' + filename;
         publishState();
 
-        dialog.showSaveDialog(windowRef && !windowRef.isDestroyed() ? windowRef : undefined, {
+        const options = {
             title: 'Save download',
             defaultPath,
             buttonLabel: 'Save'
-        }).then(result => {
+        };
+        const saveDialog = windowRef && !windowRef.isDestroyed()
+            ? dialog.showSaveDialog(windowRef, options)
+            : dialog.showSaveDialog(options);
+        saveDialog.then(result => {
             if (result.canceled || !result.filePath) {
                 item.cancel();
                 downloadStatus = 'Download cancelled';
