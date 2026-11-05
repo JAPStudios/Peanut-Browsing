@@ -1,0 +1,20 @@
+# Peanut Browsing search configuration.
+# Defaults are inherited from SearXNG; only local overrides belong here.
+use_default_settings: true
+
+general:
+  debug: false
+  instance_name: "Peanut Browsing"
+
+search:
+  formats:
+    - html
+    - json
+
+server:
+  secret_key: "ultrasecretkey"
+  limiter: true
+  image_proxy: true
+
+valkey:
+  url: valkey://valkey:6379/0
