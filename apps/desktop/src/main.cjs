@@ -406,6 +406,33 @@ function registerIpc() {
             }
         });
     });
+    ipcMain.handle('peanut:import-sites', async (event, addresses) => {
+        if (!isTrustedUi(event)) throw new Error('Not authorised.');
+        if (!Array.isArray(addresses)) throw new Error('Provide a list of website addresses.');
+        const list = Array.from(new Set(addresses.map(value => String(value || '').trim()).filter(Boolean)));
+        if (list.length === 0 || list.length > 10) {
+            throw new Error('Provide between 1 and 10 website addresses per batch.');
+        }
+        const results = [];
+        for (let index = 0; index < list.length; index += 1) {
+            const address = list[index];
+            const progressHandler = progress => {
+                const update = { ...progress, websiteIndex: index + 1, websiteTotal: list.length };
+                if (chromeView && !chromeView.webContents.isDestroyed()) {
+                    chromeView.webContents.send('peanut:import-progress', update);
+                }
+                if (libraryWindow && !libraryWindow.isDestroyed()) {
+                    libraryWindow.webContents.send('peanut:import-progress', update);
+                }
+            };
+            try {
+                results.push(await crawlSite(address, progressHandler));
+            } catch (error) {
+                results.push({ status: 'failed', websiteUrl: address, error: error.message || 'Import failed.' });
+            }
+        }
+        return results;
+    });
     ipcMain.handle('peanut:new-tab', event => {
         if (!isChrome(event)) throw new Error('Not authorised.');
         return createTab();
