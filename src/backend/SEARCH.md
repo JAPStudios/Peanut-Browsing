@@ -21,9 +21,9 @@ No external search provider is configured as a fallback. If the first-party inde
 
 ## Indexing websites
 
-The first-party index crawler accepts explicitly submitted public website addresses. It reads each seed's sitemap and follows ordinary public links across origins. Each origin has its own `robots.txt` policy and crawl delay; individual page requests and redirects remain on the current origin. Private/local targets are rejected and each origin is limited to three page visits per crawl, within a global limit of 25 pages. Extracted titles, URLs and text are stored in SQLite FTS5 and ranked with BM25.
+The first-party index crawler accepts explicitly submitted public website addresses. It obeys `robots.txt`, remains on the submitted website's origin, rejects private/local targets, limits a crawl to 25 pages, and stores extracted titles, URLs, and text in SQLite FTS5. Search uses BM25 ranking.
 
-Discovery is seed-driven rather than continuous or web-wide. This expands the first-party index beyond a single submitted site's pages, but does not yet constitute a comprehensive web-scale index.
+The crawler does not yet discover the entire public web automatically. Pages appear only after their website has been submitted for indexing. It is therefore an independent first-party search engine foundation, not yet a comprehensive web-scale search index.
 
 The owner-only Wix web module `src/backend/indexedWebsites.jsw` exposes `indexWebsite(url, maxPages)` for submitting a website to the crawler after the gateway and Wix secrets are configured.
 

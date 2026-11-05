@@ -443,6 +443,8 @@ def crawl_site(seed_url: str, max_pages: int, store: IndexStore):
                         and visits_by_origin.get(candidate_host, 0) < max_pages_per_origin):
                     queued.add(candidate)
                     queue.append(candidate)
+        except (HTTPError, URLError, OSError, ValueError):
+            continue
 
     return {"visited": visited, "indexed": indexed, "remaining": len(queue),
             "sitemapsRead": sitemaps_read, "sitemapPagesDiscovered": len(sitemap_urls),
