@@ -4,9 +4,10 @@ This is Peanut Browsing's own searchable page index. Search uses SQLite FTS5 wit
 
 ## Capabilities
 
-- Discover sitemap declarations in `robots.txt`, follow nested same-origin sitemap indexes, then crawl explicitly submitted public websites.
-- Stay on each submitted website's origin during sitemap discovery and page crawling.
-- Read and obey `robots.txt`; stop if the robots policy cannot be checked.
+- Discover sitemap declarations in `robots.txt` and follow nested same-origin sitemap indexes for each submitted seed.
+- Follow ordinary links to other public websites, applying a separately retrieved `robots.txt` policy and crawl delay to each origin.
+- Restrict each individual page fetch and redirect to its current origin; skip an origin when its robots policy cannot be checked.
+- Limit each origin to three page visits per crawl and apply a global per-crawl page limit.
 - Reject local, private, loopback, reserved, credential-bearing, and non-HTTP(S) targets.
 - Pin each outbound connection to a DNS address that was checked as globally routable, preventing a hostname from changing to a private address between validation and connection.
 - Limit each crawl to 25 pages, 2 MiB per page, plus bounded extracted text.
@@ -14,7 +15,7 @@ This is Peanut Browsing's own searchable page index. Search uses SQLite FTS5 wit
 - Rank matching pages using SQLite's BM25 implementation.
 - Require the search gateway API key for search and crawl requests.
 
-The crawler reads up to 10 sitemap documents and discovers up to 1,000 same-origin sitemap URLs per submission, then follows links within the submitted website. It still does not automatically discover the entire public web. A website must be submitted as a seed before its pages can appear in search results.
+The crawler reads up to 10 sitemap documents and discovers up to 1,000 same-origin sitemap URLs per submitted seed. It can then follow public links across origins, subject to per-origin robots policies, crawl delays and page limits. Discovery remains seed-driven: it does not yet continuously discover the entire public web.
 
 ## API
 
