@@ -25,6 +25,9 @@ let profile = { bookmarks: [], history: [] };
 let selectedSiteId = null;
 let selectedPageId = null;
 let activePageUrl = '';
+let activeSiteId = '';
+let activeAssetToken = '';
+let activePageAssets = [];
 let currentPage = null;
 
 function updatePreview() {
@@ -172,6 +175,9 @@ async function loadPage(pageId) {
     try {
         const page = await api.readImportedPage({ siteId: selectedSiteId, pageId });
         currentPage = page;
+        activeSiteId = page.siteId || '';
+        activeAssetToken = page.assetToken || '';
+        activePageAssets = Array.isArray(page.assets) ? page.assets : [];
         titleInput.value = page.title || '';
         descriptionInput.value = page.description || '';
         sourceUpdateNote.hidden = !page.sourceUpdatedSinceEdit;
