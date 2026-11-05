@@ -7,7 +7,6 @@ requires the shared gateway key for search and crawl operations.
 """
 from __future__ import annotations
 
-import html
 import hmac
 import ipaddress
 import json
@@ -17,7 +16,6 @@ import socket
 import sqlite3
 import time
 from collections import deque
-from datetime import datetime, timezone
 from html.parser import HTMLParser
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.error import HTTPError, URLError
@@ -239,7 +237,10 @@ def crawl_site(seed_url: str, max_pages: int, store: IndexStore):
             store.upsert(final_url, title or urlsplit(final_url).hostname or final_url, body)
             indexed += 1
             for href in links:
-                candidate = validate_public_url(urljoin(final_url, href))
+                try:
+                    candidate = validate_public_url(urljoin(final_url, href))
+                except ValueError:
+                    continue
                 candidate = urldefrag(candidate)[0]
                 if same_origin(origin, candidate) and candidate not in queued and len(queued) < max_pages * 8:
                     queued.add(candidate)
@@ -253,7 +254,6 @@ def crawl_site(seed_url: str, max_pages: int, store: IndexStore):
 
 
 class SearchHandler(BaseHTTPRequestHandler):
-    store = IndexStore(DATABASE_PATH)
 
     def log_message(self, format_string, *args):
         return
@@ -275,7 +275,7 @@ class SearchHandler(BaseHTTPRequestHandler):
     def do_GET(self):
         parsed = urlsplit(self.path)
         if parsed.path == "/healthz":
-            self.send_json(200, {"status": "ok", "indexedPages": self.store.connect().execute(
+            self.send_json(200, {"status": "ok", "indexedPages": self.server.store.connect().execute(
                 "SELECT COUNT(*) FROM page_index"
             ).fetchone()[0]})
             return
@@ -290,7 +290,7 @@ class SearchHandler(BaseHTTPRequestHandler):
         try:
             limit = min(max(int(params.get("limit", [DEFAULT_SEARCH_LIMIT])[0]), 1), MAX_SEARCH_LIMIT)
             offset = min(max(int(params.get("offset", [0])[0]), 0), 100_000)
-            result = self.store.search(query, limit, offset)
+            result = self.server.store.search(query, limit, offset)
             self.send_json(200, {"status": "ok", **result})
         except (ValueError, sqlite3.Error) as error:
             self.send_json(400, {"status": "error", "error": str(error)})
@@ -311,7 +311,7 @@ class SearchHandler(BaseHTTPRequestHandler):
             max_pages = int(payload.get("maxPages", DEFAULT_CRAWL_PAGES))
             if not 1 <= max_pages <= MAX_CRAWL_PAGES:
                 raise ValueError("maxPages must be between 1 and 25.")
-            result = crawl_site(seed_url, max_pages, self.store)
+            result = crawl_site(seed_url, max_pages, self.server.store)
             self.send_json(200, {"status": "ok", "seed": seed_url, **result})
         except (ValueError, TypeError, json.JSONDecodeError, sqlite3.Error) as error:
             self.send_json(400, {"status": "error", "error": str(error)})
@@ -326,6 +326,7 @@ def main():
     if not API_KEY:
         raise SystemExit("PEANUT_SEARCH_API_KEY must be configured.")
     server = ThreadingHTTPServer(("0.0.0.0", 8081), SearchHandler)
+    server.store = IndexStore(DATABASE_PATH)
     server.serve_forever()
 
 
