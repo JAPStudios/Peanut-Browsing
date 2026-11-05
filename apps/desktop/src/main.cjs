@@ -496,7 +496,7 @@ function registerIpc() {
         if (!isTrustedUi(event)) throw new Error('Not authorised.');
         return listImportedSites(importRoot());
     });
-    ipcMain.handle('peanut:read-imported-page', (event, input) => {
+    ipcMain.handle('peanut:read-imported-page', async (event, input) => {
         if (!isTrustedUi(event)) throw new Error('Not authorised.');
         const page = await readImportedPage(importRoot(), input?.siteId, input?.pageId);
         return { ...page, assetToken: assetAccessToken };
