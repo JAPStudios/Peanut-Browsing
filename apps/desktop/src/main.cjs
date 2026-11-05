@@ -442,7 +442,13 @@ function createWindow() {
 app.whenReady().then(() => {
     Menu.setApplicationMenu(null);
     createWindow();
-    loadTrackingProtection();
+    if (process.env.PEANUT_CI_TEST === '1') {
+        loadTrackingProtection().then(() => {
+            app.exit(protectionStatus === 'enabled' ? 0 : 1);
+        });
+    } else {
+        loadTrackingProtection();
+    }
     app.on('activate', () => {
         if (!windowRef || windowRef.isDestroyed()) createWindow();
     });
