@@ -1,4 +1,30 @@
 const net = require('node:net');
+const dns = require('node:dns').promises;
+const ipaddr = require('ipaddr.js');
+
+function isPublicAddress(address) {
+    try {
+        return ipaddr.process(address).range() === 'unicast';
+    } catch {
+        return false;
+    }
+}
+
+async function assertPublicHostname(hostname) {
+    if (typeof hostname !== 'string' || !hostname || net.isIP(hostname)) {
+        throw new Error('Website imports require a public DNS hostname.');
+    }
+    let records;
+    try {
+        records = await dns.lookup(hostname, { all: true, verbatim: true });
+    } catch {
+        throw new Error('The website hostname could not be resolved.');
+    }
+    if (!records.length || records.some(record => !isPublicAddress(record.address))) {
+        throw new Error('The website hostname resolves to a private, local or reserved network address.');
+    }
+    return records;
+}
 
 function normalizeHttpUrl(value, requiredOrigin) {
     let url;
@@ -44,4 +70,4 @@ function extractSitemapLocations(xml, limit = 2000) {
     return locations;
 }
 
-module.exports = { normalizeHttpUrl, decodeXml, extractSitemapLocations };
+module.exports = { normalizeHttpUrl, decodeXml, extractSitemapLocations, isPublicAddress, assertPublicHostname };
