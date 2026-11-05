@@ -6,15 +6,20 @@ function isNonPublicIpv4(hostname) {
     if (!/^(?:\d{1,3}\.){3}\d{1,3}$/.test(hostname)) return false;
     const octets = hostname.split('.').map(Number);
     if (octets.some(value => value < 0 || value > 255)) return true;
-    const [a, b, c] = octets;
-    return a === 0 || a === 10 || a === 127 || a >= 224 ||
-        (a === 100 && b >= 64 && b <= 127) ||
-        (a === 169 && b === 254) ||
-        (a === 172 && b >= 16 && b <= 31) ||
-        (a === 192 && (b === 0 || b === 168 || (b === 0 && c === 2) ||
-            (b === 88 && c === 99))) ||
-        (a === 198 && (b === 18 || b === 19 || (b === 51 && c === 100))) ||
-        (a === 203 && b === 0 && c === 113);
+    const address = (((octets[0] * 256 + octets[1]) * 256 + octets[2]) * 256 + octets[3]) >>> 0;
+    const ranges = [
+        ['0.0.0.0', 8], ['10.0.0.0', 8], ['100.64.0.0', 10], ['127.0.0.0', 8],
+        ['169.254.0.0', 16], ['172.16.0.0', 12], ['192.0.0.0', 24],
+        ['192.0.2.0', 24], ['192.88.99.0', 24], ['192.168.0.0', 16],
+        ['198.18.0.0', 15], ['198.51.100.0', 24], ['203.0.113.0', 24],
+        ['224.0.0.0', 4], ['240.0.0.0', 4]
+    ];
+    return ranges.some(([network, prefix]) => {
+        const base = network.split('.').map(Number)
+            .reduce((value, octet) => value * 256 + octet, 0) >>> 0;
+        const mask = prefix === 0 ? 0 : (0xffffffff << (32 - prefix)) >>> 0;
+        return (address & mask) === (base & mask);
+    });
 }
 
 export function validatePublicWebsiteUrl(value) {
