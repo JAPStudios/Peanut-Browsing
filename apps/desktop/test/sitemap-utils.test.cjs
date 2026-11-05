@@ -3,6 +3,7 @@ const assert = require('node:assert/strict');
 
 const {
     normalizeHttpUrl,
+    normalizeAssetUrl,
     decodeXml,
     extractSitemapLocations,
     isPublicAddress
@@ -52,4 +53,18 @@ test('classifies public and non-public IP address ranges', () => {
     assert.equal(isPublicAddress('::1'), false);
     assert.equal(isPublicAddress('fc00::1'), false);
     assert.equal(isPublicAddress('fe80::1'), false);
+});
+
+test('allows same-origin assets plus trusted HTTPS Wix media CDNs only', () => {
+    assert.equal(
+        normalizeAssetUrl('https://example.test/image.png', 'https://example.test').href,
+        'https://example.test/image.png'
+    );
+    assert.equal(
+        normalizeAssetUrl('https://static.wixstatic.com/media/image.png', 'https://example.test').hostname,
+        'static.wixstatic.com'
+    );
+    assert.equal(normalizeAssetUrl('https://cdn.attacker.test/image.png', 'https://example.test'), null);
+    assert.equal(normalizeAssetUrl('http://static.wixstatic.com/image.png', 'https://example.test'), null);
+    assert.equal(normalizeAssetUrl('http://127.0.0.1/image.png', 'https://example.test'), null);
 });
