@@ -5,12 +5,14 @@ on:
     paths:
       - "apps/desktop/**"
       - "services/search/**"
+      - "services/index/**"
       - "src/backend/**"
       - ".github/workflows/peanut-desktop-syntax.yml"
   pull_request:
     paths:
       - "apps/desktop/**"
       - "services/search/**"
+      - "services/index/**"
       - "src/backend/**"
       - ".github/workflows/peanut-desktop-syntax.yml"
 
