@@ -4,7 +4,7 @@ const RESULTS_PER_PAGE = 20;
 
 export function validateSearchRequest(query, page) {
     if (typeof query !== 'string') throw new Error('Enter a search phrase.');
-    const normalizedQuery = query.trim().replace(/\\s+/g, ' ');
+    const normalizedQuery = query.trim().replace(/\s+/g, ' ');
     if (!normalizedQuery || normalizedQuery.length > MAX_QUERY_LENGTH) {
         throw new Error('Search phrases must contain between 1 and ' + MAX_QUERY_LENGTH + ' characters.');
     }
@@ -22,10 +22,10 @@ export function validateSearchEndpoint(value) {
         throw new Error('The search service address is not configured correctly.');
     }
     const hostname = endpoint.hostname.toLowerCase();
-    const isIpv4 = /^(?:\\d{1,3}\\.){3}\\d{1,3}$/.test(hostname);
-    const privateIpv4 = isIpv4 && (/^10\\./.test(hostname) || /^127\\./.test(hostname) ||
-        /^169\\.254\\./.test(hostname) || /^192\\.168\\./.test(hostname) ||
-        /^172\\.(?:1[6-9]|2\\d|3[01])\\./.test(hostname) || /^0\\./.test(hostname));
+    const isIpv4 = /^(?:\d{1,3}\.){3}\d{1,3}$/.test(hostname);
+    const privateIpv4 = isIpv4 && (/^10\./.test(hostname) || /^127\./.test(hostname) ||
+        /^169\.254\./.test(hostname) || /^192\.168\./.test(hostname) ||
+        /^172\.(?:1[6-9]|2\d|3[01])\./.test(hostname) || /^0\./.test(hostname));
     if (endpoint.protocol !== 'https:' || endpoint.username || endpoint.password ||
         hostname === 'localhost' || hostname.endsWith('.localhost') || hostname.endsWith('.local') ||
         hostname.endsWith('.internal') || hostname.endsWith('.test') || hostname.endsWith('.invalid') ||
@@ -39,7 +39,8 @@ export function validateSearchEndpoint(value) {
 export function buildSearchUrl(endpointValue, query, page) {
     const endpoint = validateSearchEndpoint(endpointValue);
     const request = validateSearchRequest(query, page);
-    const path = endpoint.pathname.replace(/\\/+$/, '');
+    let path = endpoint.pathname;
+    while (path.endsWith('/')) path = path.slice(0, -1);
     endpoint.pathname = path.endsWith('/search') ? path : path + '/search';
     endpoint.search = '';
     endpoint.searchParams.set('q', request.query);
