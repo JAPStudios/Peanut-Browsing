@@ -13,6 +13,8 @@ const textInput = document.getElementById('text-content');
 const pageUrl = document.getElementById('page-url');
 const previewFrame = document.getElementById('page-preview');
 const assetCountElement = document.getElementById('asset-count');
+const sourceUpdateNote = document.getElementById('source-update-note');
+const restoreSourceButton = document.getElementById('restore-source');
 const saveButton = document.getElementById('save-page');
 const batchSitesInput = document.getElementById('batch-sites');
 const batchImportButton = document.getElementById('batch-import');
@@ -23,6 +25,7 @@ let profile = { bookmarks: [], history: [] };
 let selectedSiteId = null;
 let selectedPageId = null;
 let activePageUrl = '';
+let currentPage = null;
 
 function updatePreview() {
     if (!activePageUrl) {
@@ -168,8 +171,14 @@ async function selectPage(pageId) {
 async function loadPage(pageId) {
     try {
         const page = await api.readImportedPage({ siteId: selectedSiteId, pageId });
+        currentPage = page;
         titleInput.value = page.title || '';
         descriptionInput.value = page.description || '';
+        sourceUpdateNote.hidden = !page.sourceUpdatedSinceEdit;
+        sourceUpdateNote.textContent = page.sourceUpdatedSinceEdit
+            ? 'The live website changed after these corrections were saved. The edited version has been preserved.'
+            : '';
+        restoreSourceButton.disabled = !page.sourceHtml;
         htmlInput.value = page.html || '';
         textInput.value = page.textContent || '';
         pageUrl.textContent = page.url || '';
@@ -202,6 +211,8 @@ editor.addEventListener('submit', async event => {
         const page = site?.pages.find(item => item.id === selectedPageId);
         if (page) page.title = result.title;
         renderPages();
+        currentPage = await api.readImportedPage({ siteId: selectedSiteId, pageId: selectedPageId });
+        sourceUpdateNote.hidden = !currentPage.sourceUpdatedSinceEdit;
         updatePreview();
         statusElement.textContent = 'Saved corrections at ' + result.editedAt;
     } catch (error) {
