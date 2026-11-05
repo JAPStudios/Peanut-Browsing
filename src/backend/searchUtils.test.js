@@ -54,6 +54,7 @@ test('rejects non-public IPv4 ranges when validating submitted websites', () => 
     }
     assert.equal(validatePublicWebsiteUrl('https://example.org/page#section'), 'https://example.org/page');
     assert.equal(validatePublicWebsiteUrl('http://8.8.8.8/'), 'http://8.8.8.8/');
+    assert.equal(validatePublicWebsiteUrl('http://192.0.1.1/'), 'http://192.0.1.1/');
 });
 
 test('rejects non-public IPv4 ranges for the configured search service', () => {
