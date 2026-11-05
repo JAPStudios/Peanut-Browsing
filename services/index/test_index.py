@@ -9,7 +9,7 @@ from urllib.request import Request, urlopen
 
 import server as index_server
 from server import (IndexStore, discover_sitemap_urls, parse_html, parse_sitemap_document,
-                    tokenize_query, validate_public_url)
+                    read_robots, tokenize_query, validate_public_url)
 
 
 class SearchIndexTests(unittest.TestCase):
@@ -24,6 +24,18 @@ class SearchIndexTests(unittest.TestCase):
         self.assertNotIn("secret", body)
         self.assertNotIn("menu", body)
         self.assertEqual(links, ["/about"])
+
+    def test_robots_redirect_must_remain_on_submitted_origin(self):
+        with patch(
+            "server.fetch_bytes",
+            return_value=(
+                b"User-agent: *\\nDisallow: /private",
+                "https://other.example/robots.txt",
+                "text/plain",
+            ),
+        ):
+            with self.assertRaisesRegex(ValueError, "redirected outside the submitted website"):
+                read_robots("https://example.org/")
 
     def test_sitemap_parser_reads_urlset_locations(self):
         kind, locations = parse_sitemap_document(
