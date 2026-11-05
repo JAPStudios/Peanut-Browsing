@@ -91,3 +91,11 @@ test('new-tab page submits searches to Peanut Browsing internal search navigatio
         { query: 'independent websites', page: 1 }
     );
 });
+
+
+test('search input clears a previous custom validation error when edited', () => {
+    const fs = require('node:fs');
+    const path = require('node:path');
+    const source = fs.readFileSync(path.join(__dirname, '../src/search.js'), 'utf8');
+    assert.match(source, /searchInput\.addEventListener\('input',\s*\(\)\s*=>\s*\{\s*searchInput\.setCustomValidity\(''\);\s*\}\);/);
+});
