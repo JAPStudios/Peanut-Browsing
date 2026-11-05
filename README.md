@@ -1,6 +1,15 @@
 # Git Integration & Wix CLI <img align="left" src="https://user-images.githubusercontent.com/89579857/185785022-cab37bf5-26be-4f11-85f0-1fac63c07d3b.png">
 
-This repo is part of Git Integration & Wix CLI, a set of tools that allows you to write, test, and publish code for your Wix site locally on your computer. 
+This repository contains Peanut Browsing's Wix/Velo site code plus a separate desktop browser application and its search service. The Wix integration remains connected to the existing Peanut Browsing site; the desktop application is developed independently.
+
+## Peanut Browsing components
+
+- `src/`: Wix/Velo website code, synced with the connected Wix site.
+- `apps/desktop/`: Electron desktop browser with multi-tab navigation, address/search input, same-origin website capture, plus an imported-page correction library.
+- `services/search/`: local SearXNG metasearch service with Valkey support.
+- `.github/workflows/peanut-desktop-syntax.yml`: source syntax checks, dependency resolution, plus search-service Compose validation.
+
+The desktop application has its own package. Its development requirements are Node.js 20 or newer, npm, Docker Compose for the local search service. The Wix/Velo project retains its separate Wix CLI workflow below.
 
 Connect your site to GitHub, develop in your favorite IDE, test your code in real time, and publish your site from the command line.
 
