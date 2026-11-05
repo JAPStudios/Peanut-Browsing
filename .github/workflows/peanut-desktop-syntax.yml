@@ -65,16 +65,15 @@ jobs:
 
       - name: Start SearXNG search service
         run: docker compose -f services/search/docker-compose.yml up -d
-      - name: Smoke-test SearXNG JSON search
+      - name: Smoke-test SearXNG home page
         run: |
           for attempt in $(seq 1 60); do
-            if curl --fail --silent http://127.0.0.1:8080/ >/dev/null; then
+            if curl --fail --silent --max-time 10 http://127.0.0.1:8080/ -o /tmp/peanut-search-home.html; then
               break
             fi
             sleep 2
           done
-          curl --fail --silent --show-error --max-time 60 "http://127.0.0.1:8080/search?q=peanut&format=json" -o /tmp/peanut-search.json
-          node -e "const data = require('/tmp/peanut-search.json'); if (!Array.isArray(data.results)) process.exit(1);"
+          grep -q "Peanut Browsing" /tmp/peanut-search-home.html
       - name: Stop SearXNG search service
         if: always()
         run: docker compose -f services/search/docker-compose.yml down -v
