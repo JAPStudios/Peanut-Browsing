@@ -23,6 +23,9 @@ test('normalizes, deduplicates and filters unsafe search results', () => {
         { title: 'Duplicate', url: 'https://example.org/page', content: 'Duplicate result' },
         { title: 'Unsafe', url: 'javascript:alert(1)' },
         { title: 'Credentials', url: 'https://user:pass@example.org/' },
+        { title: 'Loopback', url: 'http://127.0.0.1/admin' },
+        { title: 'Private network', url: 'http://192.168.1.10/' },
+        { title: 'Local hostname', url: 'https://printer.local/' },
         { title: '', url: 'https://second.example/path', content: 'Second result' }
     ]);
     assert.equal(results.length, 2);
