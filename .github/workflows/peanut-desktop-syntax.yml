@@ -30,5 +30,7 @@ jobs:
         run: node --check apps/desktop/src/preload.cjs
       - name: Check renderer
         run: node --check apps/desktop/src/renderer/app.js
+      - name: Prepare example search environment
+        run: cp services/search/.env.example services/search/.env
       - name: Validate search service Compose configuration
-        run: docker compose --env-file services/search/.env.example -f services/search/docker-compose.yml config --quiet
+        run: docker compose -f services/search/docker-compose.yml config --quiet
