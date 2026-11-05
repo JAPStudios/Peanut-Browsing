@@ -14,7 +14,7 @@ protocol.registerSchemesAsPrivileged([{
         corsEnabled: true,
         stream: true
     }
-} , {
+}, {
     scheme: 'peanut-search',
     privileges: { standard: true, secure: true, supportFetchAPI: true, corsEnabled: true }
 }]);
