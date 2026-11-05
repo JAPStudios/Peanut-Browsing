@@ -26,7 +26,7 @@ async function assertPublicHostname(hostname) {
     return records;
 }
 
-function normalizeHttpUrl(value, requiredOrigin) {
+function normalizeHttpUrl(value, requiredOrigin, requiredPathPrefix = '/') {
     let url;
     try {
         url = new URL(value);
@@ -41,6 +41,10 @@ function normalizeHttpUrl(value, requiredOrigin) {
         /^192\.168\./.test(url.hostname) || /^169\.254\./.test(url.hostname) ||
         /^172\.(1[6-9]|2[0-9]|3[01])\./.test(url.hostname)) return null;
     if (requiredOrigin && url.origin !== requiredOrigin) return null;
+    if (requiredPathPrefix && requiredPathPrefix !== '/') {
+        const prefix = requiredPathPrefix.replace(/\\/+$/, '');
+        if (url.pathname !== prefix && !url.pathname.startsWith(prefix + '/')) return null;
+    }
     url.hash = '';
     return url;
 }
