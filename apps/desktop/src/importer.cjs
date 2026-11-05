@@ -2,7 +2,7 @@ const crypto = require('node:crypto');
 const fs = require('node:fs/promises');
 const path = require('node:path');
 const { app, BrowserWindow } = require('electron');
-const { normalizeHttpUrl, normalizeAssetUrl, decodeXml, extractSitemapLocations, assertPublicHostname } = require('./sitemap-utils.cjs');
+const { normalizeHttpUrl, normalizeAssetUrl, parseSitemapDeclarations, extractSitemapLocations, assertPublicHostname } = require('./sitemap-utils.cjs');
 const { mergeImportedPage } = require('./page-record.cjs');
 
 const MAX_PAGES = 250;
@@ -86,7 +86,7 @@ function extensionForAsset(url, contentType) {
     if (known[contentType]) return known[contentType];
     try {
         const extension = path.extname(new URL(url).pathname).toLowerCase();
-        return /^\\.[a-z0-9]{1,8}$/.test(extension) ? extension : '.bin';
+        return /^\.[a-z0-9]{1,8}$/.test(extension) ? extension : '.bin';
     } catch {
         return '.bin';
     }
@@ -135,11 +135,9 @@ async function discoverSitemapPages(browserSession, origin, pathPrefix = '/') {
     const robotsUrl = new URL('/robots.txt', origin).href;
     const robots = await fetchLimitedText(browserSession, robotsUrl, MAX_ROBOTS_CHARS);
     if (robots) {
-        for (const line of robots.split(/\\r?\\n/)) {
-            const match = line.match(/^\\s*sitemap\\s*:\\s*(\\S+)/i);
-            if (!match) continue;
-            const sitemap = normalizeHttpUrl(match[1], origin);
-            if (sitemap && !queuedSitemaps.has(sitemap.href) && sitemapQueue.length < MAX_SITEMAPS) {
+        for (const address of parseSitemapDeclarations(robots, MAX_SITEMAPS)) {
+            const sitemap = normalizeHttpUrl(address, origin);
+            if (sitemap && !queuedSitemaps.has(sitemap.href)) {
                 queuedSitemaps.add(sitemap.href);
                 sitemapQueue.push(sitemap.href);
             }
@@ -161,7 +159,7 @@ async function discoverSitemapPages(browserSession, origin, pathPrefix = '/') {
         const xml = await fetchLimitedText(browserSession, sitemapAddress, MAX_SITEMAP_CHARS);
         if (!xml) continue;
 
-        const isIndex = /<(?:[\\w.-]+:)?sitemapindex\\b/i.test(xml);
+        const isIndex = /<(?:[\w.-]+:)?sitemapindex\b/i.test(xml);
         for (const location of extractSitemapLocations(xml)) {
             const normalized = normalizeHttpUrl(location, origin, isIndex ? '/' : pathPrefix);
             if (!normalized) continue;
