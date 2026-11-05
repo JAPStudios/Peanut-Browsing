@@ -13,7 +13,7 @@ The Wix backend adapts the SearXNG metasearch service in `services/search/`. The
 ### Production deployment
 
 1. Provision a server with Docker Engine and the Docker Compose plugin. Keep the server updated.
-2. Copy `.env.production.example` to `.env`. Replace both placeholder secrets with independently generated random values. Never commit `.env`.
+2. Copy `.env.production.example` to `.env`. Replace both placeholder secrets with independently generated random hexadecimal values (for example, `openssl rand -hex 32`). Never commit `.env`.
 3. Start the production stack from this directory:
 
    `docker compose --env-file .env -f docker-compose.production.yml up -d`
