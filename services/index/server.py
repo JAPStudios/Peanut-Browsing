@@ -225,7 +225,9 @@ def read_robots(origin: str):
             parser.parse([])
         else:
             raise ValueError("robots.txt could not be checked; crawling stopped.") from error
-    except (URLError, OSError, ValueError) as error:
+    except ValueError:
+        raise
+    except (URLError, OSError) as error:
         raise ValueError("robots.txt could not be checked; crawling stopped.") from error
     return parser
 
