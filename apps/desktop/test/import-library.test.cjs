@@ -7,7 +7,8 @@ const path = require('node:path');
 const {
     listImportedSites,
     readImportedPage,
-    saveImportedPage
+    saveImportedPage,
+    exportImportedSite
 } = require('../src/import-library.cjs');
 
 async function fixture(t) {
@@ -89,6 +90,69 @@ test('saves edited page content and updates the manifest title', async t => {
 
     const sites = await listImportedSites(root);
     assert.equal(sites[0].pages[0].title, 'Corrected title');
+});
+
+
+test('exports corrected pages with local assets and relative internal links', async t => {
+    const { root, siteId, pageId } = await fixture(t);
+    const siteDirectory = path.join(root, siteId);
+    const aboutId = 'c'.repeat(64);
+    const logoName = 'd'.repeat(64) + '.png';
+    const cssName = 'e'.repeat(64) + '.css';
+    const backgroundName = 'f'.repeat(64) + '.png';
+    await fs.mkdir(path.join(siteDirectory, 'assets'), { recursive: true });
+    await fs.writeFile(path.join(siteDirectory, 'assets', logoName), Buffer.from('logo'));
+    await fs.writeFile(path.join(siteDirectory, 'assets', cssName), 'body { background: url("/assets/background.png"); }');
+    await fs.writeFile(path.join(siteDirectory, 'assets', backgroundName), Buffer.from('background'));
+
+    const manifestPath = path.join(siteDirectory, 'manifest.json');
+    const manifest = JSON.parse(await fs.readFile(manifestPath, 'utf8'));
+    manifest.assets = [
+        { url: 'https://example.test/assets/logo.png', filename: logoName, mimeType: 'image/png' },
+        { url: 'https://example.test/assets/site.css', filename: cssName, mimeType: 'text/css' },
+        { url: 'https://example.test/assets/background.png', filename: backgroundName, mimeType: 'image/png' }
+    ];
+    manifest.pages.push({
+        id: aboutId,
+        filename: aboutId + '.json',
+        url: 'https://example.test/about/',
+        title: 'About'
+    });
+    manifest.pageCount = 2;
+    await fs.writeFile(manifestPath, JSON.stringify(manifest));
+
+    const home = JSON.parse(await fs.readFile(path.join(siteDirectory, pageId + '.json'), 'utf8'));
+    home.html = '<html><head><link rel="stylesheet" href="/assets/site.css"></head><body><a href="/about/">About</a><img src="/assets/logo.png"></body></html>';
+    home.assets = [
+        { url: 'https://example.test/assets/logo.png', filename: logoName, references: ['/assets/logo.png'] },
+        { url: 'https://example.test/assets/site.css', filename: cssName, references: ['/assets/site.css'] }
+    ];
+    await fs.writeFile(path.join(siteDirectory, pageId + '.json'), JSON.stringify(home));
+    await fs.writeFile(path.join(siteDirectory, aboutId + '.json'), JSON.stringify({
+        url: 'https://example.test/about/',
+        title: 'About',
+        html: '<html><body><a href="/">Home</a></body></html>',
+        assets: []
+    }));
+
+    const destination = await fs.mkdtemp(path.join(os.tmpdir(), 'peanut-export-test-'));
+    t.after(() => fs.rm(destination, { recursive: true, force: true }));
+    const result = await exportImportedSite(root, siteId, destination);
+    assert.equal(result.status, 'exported');
+    assert.equal(result.pageCount, 2);
+    assert.equal(result.assetCount, 3);
+
+    const homeHtml = await fs.readFile(path.join(result.directory, 'index.html'), 'utf8');
+    assert.match(homeHtml, /href="about\/index\.html"/);
+    assert.ok(homeHtml.includes('assets/' + logoName));
+    assert.ok(homeHtml.includes('assets/' + cssName));
+
+    const aboutHtml = await fs.readFile(path.join(result.directory, 'about', 'index.html'), 'utf8');
+    assert.match(aboutHtml, /href="\.\.\/index\.html"/);
+
+    const css = await fs.readFile(path.join(result.directory, 'assets', cssName), 'utf8');
+    assert.ok(css.includes('url("' + backgroundName + '")'));
+    assert.ok((await fs.stat(path.join(result.directory, 'assets', backgroundName))).isFile());
 });
 
 test('rejects path traversal identifiers', async t => {
