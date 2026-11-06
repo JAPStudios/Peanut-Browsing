@@ -380,13 +380,26 @@ function escapeHtmlText(value) {
         .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 }
 
-function makeAuthoredPage(url, title) {
+const WEBSITE_TEMPLATES = {
+    blank: '<h1>{{title}}</h1><p>Start building this website by editing this page.</p>',
+    landing: '<main class="hero"><p class="eyebrow">WELCOME</p><h1>{{title}}</h1><p>Introduce this website and explain what visitors can find here.</p></main><section><h2>What this website offers</h2><p>Add the information, services or resources that matter to visitors.</p></section>',
+    portfolio: '<main><h1>{{title}}</h1><p>A collection of selected work and projects.</p><section><h2>About</h2><p>Introduce the creator and the work.</p></section><section><h2>Selected work</h2><ul><li>Project one</li><li>Project two</li><li>Project three</li></ul></section>',
+    blog: '<main><h1>{{title}}</h1><p>Articles and updates.</p><article><h2>First post</h2><p>Replace this introduction with the first article.</p></article><article><h2>Latest updates</h2><p>Add another post or update.</p></article>',
+    documentation: '<main><h1>{{title}}</h1><p>Guides and reference material.</p><nav aria-label="Documentation sections"><a href="#getting-started">Getting started</a> · <a href="#guides">Guides</a> · <a href="#reference">Reference</a></nav><section id="getting-started"><h2>Getting started</h2><p>Explain the first steps.</p></section><section id="guides"><h2>Guides</h2><p>Add practical instructions.</p></section><section id="reference"><h2>Reference</h2><p>Add detailed reference material.</p></section>'
+};
+
+function makeAuthoredPage(url, title, template = 'blank') {
     const safeTitle = escapeHtmlText(title);
-    const html = '<!doctype html>\n<html lang="en">\n<head>\n  <meta charset="utf-8">\n' +
-        '  <meta name="viewport" content="width=device-width, initial-scale=1">\n' +
-        '  <title>' + safeTitle + '</title>\n</head>\n<body>\n  <main>\n    <h1>' +
-        safeTitle + '</h1>\n    <p>Edit this page in Peanut Browsing.</p>\n  </main>\n</body>\n</html>\n';
-    const sourceHash = fingerprint([title, '', html, title].join('\n'));
+    const markup = WEBSITE_TEMPLATES[template];
+    if (!markup) throw new Error('Choose a supported website template.');
+    const content = markup.replace(/\\{\\{title\\}\\}/g, safeTitle);
+    const html = '<!doctype html>\\n<html lang="en">\\n<head>\\n' +
+        '  <meta charset="utf-8">\\n' +
+        '  <meta name="viewport" content="width=device-width, initial-scale=1">\\n' +
+        '  <title>' + safeTitle + '</title>\\n' +
+        '  <style>body{margin:0;font:16px/1.65 system-ui,sans-serif;color:#20242b;background:#fff}main,section{width:min(760px,calc(100% - 40px));margin:48px auto}h1{font-size:clamp(2rem,6vw,3.5rem);line-height:1.1}h2{margin-top:2rem}.hero{padding:12vh 0}.eyebrow{letter-spacing:.12em;font-size:.8rem}a{color:#1459a6}li{margin:.5rem 0}</style>\\n' +
+        '</head>\\n<body>\\n' + content + '\\n</body>\\n</html>\\n';
+    const sourceHash = fingerprint([title, '', html, title].join('\\n'));
     return {
         url,
         title,
@@ -412,11 +425,15 @@ function makeAuthoredPage(url, title) {
 
 async function createWebsite(importRoot, input) {
     const name = typeof input?.name === 'string' ? input.name.trim() : '';
+    const template = typeof input?.template === 'string' ? input.template : 'blank';
     if (!name || name.length > 80) throw new Error('Enter a website name of 1 to 80 characters.');
+    if (!Object.prototype.hasOwnProperty.call(WEBSITE_TEMPLATES, template)) {
+        throw new Error('Choose a supported website template.');
+    }
     const siteId = fingerprint(crypto.randomUUID() + name).slice(0, 20);
     const websiteUrl = 'peanut-site://' + siteId + '/';
     const pageId = fingerprint(websiteUrl);
-    const page = makeAuthoredPage(websiteUrl, name);
+    const page = makeAuthoredPage(websiteUrl, name, template);
     const siteDirectory = path.join(importRoot, siteId);
     await fs.mkdir(siteDirectory, { recursive: false });
     await atomicWrite(path.join(siteDirectory, pageId + '.json'), page);
@@ -424,6 +441,7 @@ async function createWebsite(importRoot, input) {
         websiteUrl,
         startUrl: websiteUrl,
         name,
+        template,
         createdAt: new Date().toISOString(),
         importedAt: new Date().toISOString(),
         pageCount: 1,
@@ -437,7 +455,7 @@ async function createWebsite(importRoot, input) {
         authored: true
     };
     await atomicWrite(path.join(siteDirectory, 'manifest.json'), manifest);
-    return { id: siteId, websiteUrl, pageCount: 1, pageId };
+    return { id: siteId, websiteUrl, pageCount: 1, pageId, template };
 }
 
 async function createWebsitePage(importRoot, input) {
