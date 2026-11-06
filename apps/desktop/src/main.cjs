@@ -597,6 +597,33 @@ function registerAuthoredSiteProtocol() {
     });
 }
 
+async function verifyAuthoredSiteProtocol() {
+    const siteId = 'c'.repeat(20);
+    const pageId = 'd'.repeat(64);
+    const siteDirectory = path.join(app.getPath('userData'), 'imports', siteId);
+    await fs.mkdir(siteDirectory, { recursive: true });
+    await fs.writeFile(path.join(siteDirectory, 'manifest.json'), JSON.stringify({
+        authored: true,
+        pages: [{ id: pageId, url: 'peanut-site://' + siteId + '/' }]
+    }), 'utf8');
+    await fs.writeFile(path.join(siteDirectory, pageId + '.json'), JSON.stringify({
+        html: '<!doctype html><html><head></head><body>Peanut authored website test</body></html>',
+        assets: []
+    }), 'utf8');
+    try {
+        const response = await session.defaultSession.fetch(
+            'peanut-site://' + siteId + '/?preview=1'
+        );
+        const body = await response.text();
+        if (!response.ok || !body.includes('Peanut authored website test') ||
+            !body.includes('Content-Security-Policy') || !body.includes('<base href=')) {
+            throw new Error('Authored website preview returned an invalid document.');
+        }
+    } finally {
+        await fs.rm(siteDirectory, { recursive: true, force: true });
+    }
+}
+
 async function verifyAssetProtocol() {
     const siteId = 'a'.repeat(20);
     const filename = 'b'.repeat(64) + '.txt';
@@ -871,6 +898,7 @@ app.whenReady().then(async () => {
             }
             try {
                 await verifyAssetProtocol();
+                await verifyAuthoredSiteProtocol();
                 app.exit(0);
             } catch (error) {
                 console.error('Local asset protocol verification failed:', error);
