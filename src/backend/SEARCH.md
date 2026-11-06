@@ -2,11 +2,11 @@
 
 The website search adapter is implemented, but its live connection to the production index is not verified. The published endpoint is operational only when the Velo backend is published, both required Wix secrets are configured and the first-party gateway is reachable over HTTPS.
 
-The published Wix site exposes:
+The Velo backend defines this intended HTTP route:
 
 `GET /_functions/peanutSearch?q=<encoded-query>&page=<page-number>`
 
-The function is defined in `src/backend/http-functions.js`. The Velo backend files must be present in the connected Wix site's Git Integration repository and published before the route can execute.
+The function is defined in `src/backend/http-functions.js`. Its availability on the published site has not been verified. The Velo backend files must be present in the connected Wix site's Git Integration repository and published before the route can execute.
 
 ## First-party index service
 
