@@ -107,3 +107,12 @@ test('search form rejects phrases without an indexable term', () => {
     const source = fs.readFileSync(path.join(__dirname, '../src/search.js'), 'utf8');
     assert.ok(source.includes(String.raw`if (!/[\p{L}\p{N}]{2,}/u.test(query))`));
 });
+
+test('normalizes restored search page state without resetting valid pages', () => {
+    const { normalizeSearchPage } = require('../src/search-page.cjs');
+    assert.equal(normalizeSearchPage(1), 1);
+    assert.equal(normalizeSearchPage(7), 7);
+    for (const value of [0, -1, 21, '2', null, undefined, 1.5]) {
+        assert.equal(normalizeSearchPage(value), 1);
+    }
+});
