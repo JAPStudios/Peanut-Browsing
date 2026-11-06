@@ -134,7 +134,9 @@ function renderProfile() {
 function renderSites() {
     sitesElement.replaceChildren(...sites.map(site => makeItem(
         site.name || site.websiteUrl || 'Imported website',
-        site.pageCount + ' pages · ' + site.errorCount + ' import errors',
+        site.authored && site.template
+            ? site.template + ' · ' + site.pageCount + ' pages'
+            : site.pageCount + ' pages · ' + site.errorCount + ' import errors',
         site.id === selectedSiteId,
         () => selectSite(site.id)
     )));
