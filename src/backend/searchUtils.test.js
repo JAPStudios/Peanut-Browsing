@@ -80,3 +80,15 @@ test('rejects non-public IPv4 ranges for the configured search service', () => {
         'https://198.51.100.1', 'https://203.0.113.1', 'https://224.0.0.1'
     ]) assert.throws(() => validateSearchEndpoint(address), /public HTTPS/);
 });
+
+test('keeps website indexing owner-only while allowing public search', async () => {
+    const { readFile } = await import('node:fs/promises');
+    const permissions = JSON.parse(await readFile(new URL('./permissions.json', import.meta.url), 'utf8'));
+    const methods = permissions['web-methods'];
+    const indexing = methods['backend/indexedWebsites.jsw'].indexWebsite;
+    const searching = methods['backend/webSearch.jsw'].searchWeb;
+    assert.equal(indexing.siteOwner.invoke, true);
+    assert.equal(indexing.siteMember.invoke, false);
+    assert.equal(indexing.anonymous.invoke, false);
+    assert.equal(searching.anonymous.invoke, true);
+});
