@@ -1,6 +1,6 @@
 # Peanut Browsing first-party search
 
-The website search adapter is implemented, but its live connection to the production index is not verified. The published endpoint is operational only when the Velo backend is published, both required Wix secrets are configured and the first-party gateway is reachable over HTTPS.
+The website search adapter is implemented. A working published search requires the Velo backend to be published, both required Wix secrets to be configured and the first-party gateway to be reachable over HTTPS. Those production conditions have not been verified.
 
 The Velo backend defines this intended HTTP route:
 
