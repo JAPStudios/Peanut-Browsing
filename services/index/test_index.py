@@ -77,7 +77,7 @@ class SearchIndexTests(unittest.TestCase):
 
     def test_search_parser_supports_and_or_phrases_and_a_term_limit(self):
         self.assertEqual(build_fts_query("Peanut AND browsing"), '"peanut"* AND "browsing"*')
-        self.assertEqual(build_fts_query("Peanut OR browsing"), '"peanut" OR "browsing"')
+        self.assertEqual(build_fts_query("Peanut OR browsing"), '"peanut"* OR "browsing"*')
         self.assertEqual(build_fts_query('"Peanut browsing"'), '"peanut browsing"')
         expression = build_fts_query("one two three four five six seven eight nine ten eleven twelve thirteen")
         self.assertNotIn('"thirteen"', expression)
