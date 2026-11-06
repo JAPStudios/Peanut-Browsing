@@ -178,6 +178,7 @@ class PageParser(HTMLParser):
         self.title_parts = []
         self.text_parts = []
         self.links = []
+        self.canonical = None
         self.in_title = False
         self.skip_depth = 0
 
@@ -185,6 +186,12 @@ class PageParser(HTMLParser):
         tag = tag.lower()
         if tag == "title":
             self.in_title = True
+        if tag == "link":
+            attributes = dict(attrs)
+            relations = (attributes.get("rel") or "").lower().split()
+            href = attributes.get("href")
+            if "canonical" in relations and href and not self.canonical:
+                self.canonical = href
         if tag in self.SKIP_TAGS:
             self.skip_depth += 1
         if tag == "a" and self.skip_depth == 0:
@@ -215,6 +222,19 @@ def parse_html(source: str) -> tuple[str, str, list[str]]:
     title = " ".join(parser.title_parts).strip()[:500]
     body = " ".join(parser.text_parts).strip()[:MAX_TEXT_CHARS]
     return title, body, parser.links
+
+
+def canonical_page_url(source: str, page_url: str) -> str:
+    """Use a valid same-origin canonical URL to consolidate duplicate page addresses."""
+    parser = PageParser()
+    parser.feed(source)
+    if not parser.canonical:
+        return page_url
+    try:
+        canonical = urldefrag(validate_public_url(urljoin(page_url, parser.canonical)))[0]
+    except ValueError:
+        return page_url
+    return canonical if same_origin(page_url, canonical) else page_url
 
 
 def build_fts_query(query: str) -> str:
@@ -452,10 +472,12 @@ def crawl_site(seed_url: str, max_pages: int, store: IndexStore):
             payload, final_url, content_type = fetch_bytes(current)
             if not same_origin(current_origin, final_url) or "html" not in content_type:
                 continue
-            title, body, links = parse_html(payload.decode("utf-8", errors="replace"))
+            html = payload.decode("utf-8", errors="replace")
+            title, body, links = parse_html(html)
             if not body:
                 continue
-            store.upsert(final_url, title or urlsplit(final_url).hostname or final_url, body)
+            indexed_url = canonical_page_url(html, final_url)
+            store.upsert(indexed_url, title or urlsplit(indexed_url).hostname or indexed_url, body)
             indexed += 1
             for href in links:
                 try:
