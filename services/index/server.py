@@ -241,7 +241,8 @@ def build_fts_query(query: str) -> str:
                 if token_count >= 12:
                     break
                 token_count += 1
-                groups[-1].append('"' + token.replace('"', '""') + '"')
+                # Prefix matching makes partial words useful while typing.
+                groups[-1].append('"' + token.replace('"', '""') + '"*')
         if token_count >= 12:
             break
     expressions = [" AND ".join(group) for group in groups if group]
