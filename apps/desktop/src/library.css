@@ -6,7 +6,7 @@
 }
 * { box-sizing: border-box; }
 body { margin: 0; min-height: 100vh; display: flex; flex-direction: column; }
-button, input, textarea { font: inherit; }
+button, input, textarea, select { font: inherit; }
 button { border: 1px solid #cbd1da; background: #fff; border-radius: 8px; padding: 9px 13px; color: #303743; cursor: pointer; }
 button:hover { background: #f0f2f5; }
 button:disabled { opacity: .55; cursor: wait; }
@@ -70,7 +70,7 @@ input, textarea {
   outline: none;
   font-size: 12px;
 }
-input:focus, textarea:focus { border-color: #7b8798; box-shadow: 0 0 0 2px rgba(90,108,132,.1); }
+input:focus, textarea:focus, select:focus { border-color: #7b8798; box-shadow: 0 0 0 2px rgba(90,108,132,.1); }
 textarea { resize: vertical; line-height: 1.5; }
 .content-builder { display: grid; grid-template-columns: 1fr; gap: 6px; padding: 12px; border: 1px solid #dce0e6; border-radius: 8px; background: #f7f8fa; }
 .content-builder h3 { margin: 0 0 4px; font-size: 13px; }
