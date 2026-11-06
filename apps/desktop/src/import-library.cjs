@@ -70,6 +70,7 @@ async function listImportedSites(importRoot) {
                 websiteUrl: manifest.websiteUrl || '',
                 name: manifest.name || '',
                 authored: Boolean(manifest.authored),
+                template: manifest.template || null,
                 startUrl: manifest.startUrl || '',
                 importedAt: manifest.importedAt || '',
                 pageCount: manifest.pageCount || 0,
@@ -382,7 +383,7 @@ function escapeHtmlText(value) {
 
 const WEBSITE_TEMPLATES = {
     blank: '<main><h1>{{title}}</h1><p>Start building this website by editing this page.</p></main>',
-    landing: '<main class="hero"><p class="eyebrow">WELCOME</p><h1>{{title}}</h1><p>Introduce this website and explain what visitors can find here.</p></main><section><h2>What this website offers</h2><p>Add the information, services or resources that matter to visitors.</p></section>',
+    landing: '<main><section class="hero"><p class="eyebrow">WELCOME</p><h1>{{title}}</h1><p>Introduce this website and explain what visitors can find here.</p></section><section><h2>What this website offers</h2><p>Add the information, services or resources that matter to visitors.</p></section></main>',
     portfolio: '<main><h1>{{title}}</h1><p>A collection of selected work and projects.</p><section><h2>About</h2><p>Introduce the creator and the work.</p></section><section><h2>Selected work</h2><ul><li>Project one</li><li>Project two</li><li>Project three</li></ul></section></main>',
     blog: '<main><h1>{{title}}</h1><p>Articles and updates.</p><article><h2>First post</h2><p>Replace this introduction with the first article.</p></article><article><h2>Latest updates</h2><p>Add another post or update.</p></article></main>',
     documentation: '<main><h1>{{title}}</h1><p>Guides and reference material.</p><nav aria-label="Documentation sections"><a href="#getting-started">Getting started</a> · <a href="#guides">Guides</a> · <a href="#reference">Reference</a></nav><section id="getting-started"><h2>Getting started</h2><p>Explain the first steps.</p></section><section id="guides"><h2>Guides</h2><p>Add practical instructions.</p></section><section id="reference"><h2>Reference</h2><p>Add detailed reference material.</p></section></main>'
