@@ -63,6 +63,12 @@ class FirstPartySearchTests(unittest.TestCase):
         result = store.search("peanut OR browser")
         self.assertEqual(result["totalResults"], 2)
 
+    def test_unquoted_terms_match_word_prefixes(self):
+        self.store.upsert("https://peanut.example/browser", "Peanut Browser", "Independent website browsing")
+        result = self.store.search("brows")
+        self.assertEqual(result["totalResults"], 1)
+        self.assertEqual(result["results"][0]["url"], "https://peanut.example/browser")
+
     def test_quoted_phrase_is_matched_as_a_phrase(self):
         store = self.store
         store.upsert("https://peanut.example/exact", "Peanut Browsing", "Create independent websites")
@@ -73,9 +79,9 @@ class FirstPartySearchTests(unittest.TestCase):
 
     def test_search_terms_are_quoted_before_fts_execution(self):
         expression = build_fts_query('peanut "browser search" OR index')
-        self.assertEqual(expression, '"peanut" AND "browser search" OR "index"')
-        self.assertEqual(build_fts_query("peanut OR browser"), '"peanut" OR "browser"')
-        self.assertEqual(build_fts_query("peanut AND browser"), '"peanut" AND "browser"')
+        self.assertEqual(expression, '"peanut"* AND "browser search" OR "index"*')
+        self.assertEqual(build_fts_query("peanut OR browser"), '"peanut"* OR "browser"*')
+        self.assertEqual(build_fts_query("peanut AND browser"), '"peanut"* AND "browser"*')
         self.assertEqual(build_fts_query('"peanut OR browser"'), '"peanut or browser"')
 
     def test_rejects_queries_without_searchable_terms(self):
