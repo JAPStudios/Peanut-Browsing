@@ -50,6 +50,10 @@ function normalizeSearchPayload(query, payload) {
 }
 
 
+function normalizeSearchPage(value) {
+    return Number.isInteger(value) && value >= 1 && value <= 20 ? value : 1;
+}
+
 function parseSearchNavigation(value) {
     try {
         const url = new URL(value);
@@ -68,5 +72,5 @@ function parseSearchNavigation(value) {
     }
 }
 
-module.exports = { normalizeSearchPayload, parseSearchNavigation };
+module.exports = { normalizeSearchPayload, normalizeSearchPage, parseSearchNavigation };
 
