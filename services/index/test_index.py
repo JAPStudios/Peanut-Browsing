@@ -26,6 +26,19 @@ class SearchIndexTests(unittest.TestCase):
         self.assertNotIn("menu", body)
         self.assertEqual(links, ["/about"])
 
+    def test_canonical_page_url_uses_same_origin_canonical_and_rejects_external(self):
+        from server import canonical_page_url
+
+        page = "https://example.org/article?utm_source=newsletter"
+        canonical_html = '<html><head><link rel="canonical" href="/article"></head><body>Page</body></html>'
+        self.assertEqual(canonical_page_url(canonical_html, page), "https://example.org/article")
+
+        external_html = '<html><head><link rel="canonical" href="https://other.example/article"></head><body>Page</body></html>'
+        self.assertEqual(canonical_page_url(external_html, page), page)
+
+        invalid_html = '<html><head><link rel="canonical" href="javascript:alert(1)"></head><body>Page</body></html>'
+        self.assertEqual(canonical_page_url(invalid_html, page), page)
+
     def test_robots_redirect_must_remain_on_submitted_origin(self):
         with patch(
             "server.fetch_bytes",
