@@ -266,3 +266,27 @@ test('rejects path traversal identifiers', async t => {
         /identifier is invalid/i
     );
 });
+
+test('creates independent websites from supported starter layouts', async t => {
+    const root = await fs.mkdtemp(path.join(os.tmpdir(), 'peanut-templates-'));
+    t.after(() => fs.rm(root, { recursive: true, force: true }));
+    const templates = [
+        ['blank', 'Start building this website'],
+        ['landing', 'What this website offers'],
+        ['portfolio', 'Selected work'],
+        ['blog', 'First post'],
+        ['documentation', 'Getting started']
+    ];
+    for (const [template, expectedContent] of templates) {
+        const created = await createWebsite(root, { name: 'Template test', template });
+        assert.equal(created.template, template);
+        const page = await readImportedPage(root, created.id, created.pageId);
+        assert.ok(page.html.includes(expectedContent), template);
+        assert.match(page.html, /<meta name="viewport"/);
+        assert.match(page.html, /<main[ >]/);
+    }
+    await assert.rejects(
+        createWebsite(root, { name: 'Invalid template', template: 'unapproved' }),
+        /supported website template/
+    );
+});
