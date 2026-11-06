@@ -24,7 +24,7 @@ The desktop application has its own package. Its development requirements are No
 
 ## Independent website creation
 
-The desktop library can create a local website, add pages, edit page markup and text, preview authored pages inside Peanut Browsing, and export the result as a static website. Authored pages use the internal `peanut-site://` address scheme and are stored in the desktop application's local data directory. Export creates ordinary HTML files and captured assets in a folder selected by the user. Creating or exporting a site does not publish it to a public domain or provide public hosting.
+The desktop library can create a local website from blank, landing-page, portfolio, blog or documentation layouts. It can add pages, edit page markup and text, preview authored pages inside Peanut Browsing, and export the result as a static website. Authored pages use the internal `peanut-site://` address scheme and are stored in the desktop application's local data directory. Export creates ordinary HTML files and captured assets in a folder selected by the user. Creating or exporting a site does not publish it to a public domain or provide public hosting.
 
 ## First-party search service
 
