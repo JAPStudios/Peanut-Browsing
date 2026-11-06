@@ -30,7 +30,7 @@ const TOOLBAR_HEIGHT = 104;
 const NEW_TAB_FILE = path.join(__dirname, 'newtab.html');
 const SEARCH_PAGE_FILE = path.join(__dirname, 'search.html');
 const SEARCH_TEMPLATE = process.env.PEANUT_SEARCH_URL || 'https://japbstudios.wixsite.com/peanut-browsing/_functions/peanutSearch?q={query}&page=1';
-const { normalizeSearchPayload, parseSearchNavigation } = require('./search-page.cjs');
+const { normalizeSearchPayload, normalizeSearchPage, parseSearchNavigation } = require('./search-page.cjs');
 
 let windowRef;
 let chromeView;
@@ -264,8 +264,8 @@ function attachTabEvents(tab) {
         const searchState = searchStateFromUrl(url);
         if (searchState && typeof searchState.query === 'string') {
             tab.searchQuery = searchState.query;
-            tab.searchPage = 1;
-            tab.url = searchDisplayUrl(searchState.query, 1);
+            tab.searchPage = normalizeSearchPage(searchState.page);
+            tab.url = searchDisplayUrl(searchState.query, tab.searchPage);
             tab.title = 'Peanut Search — ' + searchState.query;
         } else {
             tab.searchQuery = null;
@@ -281,8 +281,8 @@ function attachTabEvents(tab) {
         const searchState = searchStateFromUrl(url);
         if (searchState && typeof searchState.query === 'string') {
             tab.searchQuery = searchState.query;
-            tab.searchPage = 1;
-            tab.url = searchDisplayUrl(searchState.query, 1);
+            tab.searchPage = normalizeSearchPage(searchState.page);
+            tab.url = searchDisplayUrl(searchState.query, tab.searchPage);
             tab.title = 'Peanut Search — ' + searchState.query;
         } else {
             tab.url = url;
@@ -299,8 +299,8 @@ function attachTabEvents(tab) {
         const searchState = searchStateFromUrl(currentUrl);
         if (searchState && typeof searchState.query === 'string') {
             tab.searchQuery = searchState.query;
-            tab.searchPage = 1;
-            tab.url = searchDisplayUrl(searchState.query, 1);
+            tab.searchPage = normalizeSearchPage(searchState.page);
+            tab.url = searchDisplayUrl(searchState.query, tab.searchPage);
             tab.title = 'Peanut Search — ' + searchState.query;
         } else {
             tab.url = currentUrl;
