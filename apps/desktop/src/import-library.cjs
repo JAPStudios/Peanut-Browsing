@@ -392,14 +392,14 @@ function makeAuthoredPage(url, title, template = 'blank') {
     const safeTitle = escapeHtmlText(title);
     const markup = WEBSITE_TEMPLATES[template];
     if (!markup) throw new Error('Choose a supported website template.');
-    const content = markup.replace(/\\{\\{title\\}\\}/g, safeTitle);
-    const html = '<!doctype html>\\n<html lang="en">\\n<head>\\n' +
-        '  <meta charset="utf-8">\\n' +
-        '  <meta name="viewport" content="width=device-width, initial-scale=1">\\n' +
-        '  <title>' + safeTitle + '</title>\\n' +
+    const content = markup.replace(/\{\{title\}\}/g, safeTitle);
+    const html = '<!doctype html>\n<html lang="en">\n<head>\n' +
+        '  <meta charset="utf-8">\n' +
+        '  <meta name="viewport" content="width=device-width, initial-scale=1">\n' +
+        '  <title>' + safeTitle + '</title>\n' +
         '  <style>body{margin:0;font:16px/1.65 system-ui,sans-serif;color:#20242b;background:#fff}main,section{width:min(760px,calc(100% - 40px));margin:48px auto}h1{font-size:clamp(2rem,6vw,3.5rem);line-height:1.1}h2{margin-top:2rem}.hero{padding:12vh 0}.eyebrow{letter-spacing:.12em;font-size:.8rem}a{color:#1459a6}li{margin:.5rem 0}</style>\\n' +
-        '</head>\\n<body>\\n' + content + '\\n</body>\\n</html>\\n';
-    const sourceHash = fingerprint([title, '', html, title].join('\\n'));
+        '</head>\n<body>\n' + content + '\n</body>\n</html>\n';
+    const sourceHash = fingerprint([title, '', html, title].join('\n'));
     return {
         url,
         title,
