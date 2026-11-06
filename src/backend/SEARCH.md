@@ -1,6 +1,6 @@
 # Peanut Browsing first-party search
 
-The website search endpoint is currently connected to the configured Peanut Browsing index service.
+The website search adapter is implemented, but its live connection to the production index is not verified. The published endpoint is operational only when the Velo backend is published, both required Wix secrets are configured and the first-party gateway is reachable over HTTPS.
 
 The published Wix site exposes:
 
