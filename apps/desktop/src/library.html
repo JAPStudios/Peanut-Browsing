@@ -20,6 +20,14 @@
       <section class="batch-import">
         <h2>Create a website</h2>
         <input id="new-site-name" type="text" maxlength="80" placeholder="Website name">
+        <label for="new-site-template">Starter layout</label>
+        <select id="new-site-template">
+          <option value="blank">Blank website</option>
+          <option value="landing">Landing page</option>
+          <option value="portfolio">Portfolio</option>
+          <option value="blog">Blog</option>
+          <option value="documentation">Documentation</option>
+        </select>
         <button id="create-site" type="button">Create website</button>
         <button id="open-site" type="button" disabled>Open selected website</button>
         <h2>Import websites</h2>
