@@ -21,6 +21,7 @@ const batchImportButton = document.getElementById('batch-import');
 const exportButton = document.getElementById('export-site');
 const batchStatus = document.getElementById('batch-status');
 const newSiteNameInput = document.getElementById('new-site-name');
+const newSiteTemplateInput = document.getElementById('new-site-template');
 const createSiteButton = document.getElementById('create-site');
 const openSiteButton = document.getElementById('open-site');
 const newPagePathInput = document.getElementById('new-page-path');
@@ -300,7 +301,7 @@ createSiteButton.addEventListener('click', async () => {
     createSiteButton.disabled = true;
     batchStatus.textContent = 'Creating website…';
     try {
-        const result = await api.createWebsite({ name: newSiteNameInput.value });
+        const result = await api.createWebsite({ name: newSiteNameInput.value, template: newSiteTemplateInput.value });
         newSiteNameInput.value = '';
         await loadSites();
         selectSite(result.id);
