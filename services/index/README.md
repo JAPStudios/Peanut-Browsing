@@ -11,6 +11,7 @@ This is Peanut Browsing's own searchable page index. Search uses SQLite FTS5 wit
 - Pin each outbound connection to a DNS address that was checked as globally routable, preventing a hostname from changing to a private address between validation and connection.
 - Limit each crawl to 25 pages, 2 MiB per page, plus bounded extracted text.
 - Store page titles, URLs, and page text in SQLite FTS5.
+- Consolidate same-origin duplicate addresses using valid canonical page links; ignore external or invalid canonical targets.
 - Match complete words and prefixes of unquoted search terms while preserving quoted-phrase matching.
 - Rank matching pages using SQLite's BM25 implementation.
 - Require the search gateway API key for search and crawl requests.
