@@ -144,7 +144,7 @@ jobs:
           docker run -d --name "$gateway" --network "$network" -p 18082:10000 -e "PEANUT_SEARCH_API_KEY=$PEANUT_SEARCH_API_KEY" -e "PEANUT_INDEX_HOST=$PEANUT_INDEX_HOST" -e "NGINX_ENVSUBST_FILTER=$NGINX_ENVSUBST_FILTER" peanut-browsing-render-gateway:ci
           gateway_ready=0
           for attempt in $(seq 1 20); do
-            if curl --fail --silent http://127.0.0.1:18082/healthz >/dev/null; then
+            if curl --max-time 2 --fail --silent http://127.0.0.1:18082/healthz >/dev/null; then
               gateway_ready=1
               break
             fi
