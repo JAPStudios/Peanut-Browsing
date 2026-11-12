@@ -5,7 +5,7 @@ services:
     region: ohio
     dockerfilePath: ./services/index/Dockerfile
     dockerContext: ./services/index
-    autoDeployTrigger: off
+    autoDeployTrigger: 'off'
     envVars:
       - key: INDEX_DB_PATH
         value: /data/index.sqlite
@@ -22,7 +22,7 @@ services:
     region: ohio
     dockerfilePath: ./services/search/gateway/Dockerfile
     dockerContext: ./services/search/gateway
-    autoDeployTrigger: off
+    autoDeployTrigger: 'off'
     healthCheckPath: /healthz
     envVars:
       - key: PEANUT_SEARCH_API_KEY
