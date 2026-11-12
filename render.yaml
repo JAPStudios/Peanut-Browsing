@@ -3,6 +3,7 @@ services:
     name: peanut-browsing-index
     runtime: docker
     region: ohio
+    plan: 0.5c-512mb
     dockerfilePath: ./services/index/Dockerfile
     dockerContext: ./services/index
     autoDeployTrigger: 'off'
@@ -20,6 +21,7 @@ services:
     name: peanut-browsing-gateway
     runtime: docker
     region: ohio
+    plan: free
     dockerfilePath: ./services/search/gateway/Dockerfile
     dockerContext: ./services/search/gateway
     autoDeployTrigger: 'off'
