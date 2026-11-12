@@ -24,6 +24,17 @@ The first-party index database is stored in the persistent `index-data` volume. 
 
 Do not expose the gateway without HTTPS. Do not commit the production `.env` file.
 
+## Render deployment
+
+The repository-root `render.yaml` defines a private first-party index service with persistent `/data` storage and a public Nginx gateway. Render generates the shared API key on the private service and passes it to the gateway through an internal service reference; no key is stored in Git. Automatic deployments are disabled in the Blueprint.
+
+Creating the Blueprint provisions paid compute and a persistent disk. Review the current Render plan and disk charges before creating the services. After deployment, set these Wix Secrets Manager entries:
+
+- `PEANUT_SEARCH_API_URL` — the public HTTPS origin of the Render gateway.
+- `PEANUT_SEARCH_API_KEY` — the same generated key used by the Render index and gateway.
+
+Do not put the API key in source files, Wix frontend code, or the public repository. The Wix search endpoint remains unavailable until both secrets are configured and the gateway passes a live authenticated request.
+
 ## Index scope
 
 The crawler accepts explicitly submitted public website addresses, checks and obeys `robots.txt`, keeps sitemap discovery on the submitted origin, follows public links to other origins under per-origin robots and crawl-delay rules, rejects private/local targets, and limits each crawl to 25 pages. The submitted seed host may use the full page budget; each linked external host is capped at 3 pages. Pages are stored in SQLite FTS5 and ranked with BM25. It is an independent first-party search index, but it is not yet a continuously discovered, web-scale index.
