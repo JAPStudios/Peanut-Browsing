@@ -1,0 +1,39 @@
+services:
+  - type: pserv
+    name: peanut-browsing-index
+    runtime: docker
+    region: ohio
+    dockerfilePath: ./services/index/Dockerfile
+    dockerContext: ./services/index
+    autoDeployTrigger: off
+    envVars:
+      - key: INDEX_DB_PATH
+        value: /data/index.sqlite
+      - key: PEANUT_SEARCH_API_KEY
+        generateValue: true
+    disk:
+      name: peanut-browsing-index-data
+      mountPath: /data
+      sizeGB: 10
+
+  - type: web
+    name: peanut-browsing-gateway
+    runtime: docker
+    region: ohio
+    dockerfilePath: ./services/search/gateway/Dockerfile
+    dockerContext: ./services/search/gateway
+    autoDeployTrigger: off
+    healthCheckPath: /healthz
+    envVars:
+      - key: PEANUT_SEARCH_API_KEY
+        fromService:
+          name: peanut-browsing-index
+          type: pserv
+          envVarKey: PEANUT_SEARCH_API_KEY
+      - key: PEANUT_INDEX_HOST
+        fromService:
+          name: peanut-browsing-index
+          type: pserv
+          property: hostport
+      - key: NGINX_ENVSUBST_FILTER
+        value: "^(PEANUT_SEARCH_API_KEY|PEANUT_INDEX_HOST)$"
