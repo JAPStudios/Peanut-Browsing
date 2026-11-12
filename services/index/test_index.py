@@ -198,6 +198,52 @@ class SearchIndexTests(unittest.TestCase):
         robots_reader.assert_any_call("https://one.example/")
         robots_reader.assert_any_call("https://two.example/")
 
+    def test_seed_origin_can_use_full_page_budget_while_linked_origins_remain_limited(self):
+        class Robots:
+            def can_fetch(self, agent, url):
+                return True
+            def crawl_delay(self, agent):
+                return 0
+
+        class Store:
+            def __init__(self):
+                self.pages = []
+            def upsert(self, url, title, body):
+                self.pages.append(url)
+
+        seed = "https://seed.example/"
+        same_origin_links = "".join(
+            '<a href="https://seed.example/' + name + '">' + name + '</a>'
+            for name in ("one", "two", "three", "four")
+        )
+        external_links = "".join(
+            '<a href="https://linked.example/' + str(number) + '">External</a>'
+            for number in range(1, 5)
+        )
+
+        def fake_fetch(url, timeout=8):
+            if url == seed:
+                return (('<title>Seed</title><p>Seed home</p>' + same_origin_links + external_links).encode(),
+                        url, "text/html")
+            if url.startswith("https://seed.example/") or url.startswith("https://linked.example/"):
+                return (('<title>Page</title><p>Indexed page</p>').encode(), url, "text/html")
+            raise AssertionError("Unexpected fetch: " + url)
+
+        store = Store()
+        with patch("server.read_robots", return_value=Robots()), \
+             patch("server.discover_sitemap_urls", return_value=([], 0)), \
+             patch("server.fetch_bytes", side_effect=fake_fetch), \
+             patch("server.socket.getaddrinfo", return_value=[
+                 (socket.AF_INET, socket.SOCK_STREAM, socket.IPPROTO_TCP, "", ("8.8.8.8", 443))
+             ]), \
+             patch("server.time.sleep"):
+            result = index_server.crawl_site(seed, 10, store)
+
+        self.assertEqual(result["indexed"], 8)
+        self.assertEqual(result["visited"], 8)
+        self.assertEqual(len([url for url in store.pages if "seed.example" in url]), 5)
+        self.assertEqual(len([url for url in store.pages if "linked.example" in url]), 3)
+
     def test_public_url_validation_rejects_unsafe_destinations(self):
         for value in (
             "file:///etc/passwd",
