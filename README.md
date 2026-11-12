@@ -1,11 +1,11 @@
 # Peanut Browsing
 
-This repository contains Peanut Browsing's Wix/Velo website code, a separate desktop browser application, and Peanut Browsing's first-party search index.
+This repository contains Peanut Browsing's Wix/Velo website code, first-party search index, website-importing and correction tools, independent website-creation tools, and browser application code.
 
 ## Components
 
 - `src/`: Wix/Velo website code connected to the existing Peanut Browsing site.
-- `apps/desktop/`: Electron desktop browser with multi-tab navigation, first-party search, website importing, an imported-page correction library, independent website creation, local previews, and static website export.
+- `apps/desktop/`: the current Electron-based browser application implementation. Its current code also contains the website importer, imported-page correction library, independent website-creation tools, local previews, and static website export. This directory describes where that implementation currently lives; it does not define Peanut Browsing as a desktop-only product or establish desktop-only project requirements.
 - `services/index/`: Peanut Browsing's own bounded web crawler and SQLite FTS5/BM25 search index.
 - `services/search/`: authenticated Nginx gateway for the first-party index.
 - `.github/workflows/peanut-desktop-syntax.yml`: source checks, tests, container build, and production gateway configuration validation.
