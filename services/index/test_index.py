@@ -1,5 +1,7 @@
+import json
 import os
 import socket
+import time
 import tempfile
 import threading
 import unittest
@@ -308,6 +310,49 @@ class SearchIndexTests(unittest.TestCase):
                 store.claim_due_seed(now=now + index_server.CRAWL_RETRY_SECONDS),
                 seed,
             )
+
+    def test_http_crawl_endpoint_registers_seed_for_automatic_recrawling(self):
+        with tempfile.TemporaryDirectory() as directory:
+            store = IndexStore(os.path.join(directory, "api.sqlite"))
+            original_key = index_server.API_KEY
+            index_server.API_KEY = "test-api-key"
+            httpd = ThreadingHTTPServer(("127.0.0.1", 0), index_server.SearchHandler)
+            httpd.store = store
+            httpd.crawl_lock = threading.Lock()
+            thread = threading.Thread(target=httpd.serve_forever, daemon=True)
+            thread.start()
+            base = "http://127.0.0.1:" + str(httpd.server_address[1])
+            seed = "https://example.org/"
+            now = time.time()
+            try:
+                body = json.dumps({"url": seed, "maxPages": 5}).encode("utf-8")
+                request = Request(
+                    base + "/crawl",
+                    data=body,
+                    headers={
+                        "Content-Type": "application/json",
+                        "Content-Length": str(len(body)),
+                        "X-API-Key": "test-api-key",
+                    },
+                    method="POST",
+                )
+                with patch("server.crawl_site", return_value={"visited": 1, "indexed": 1}):
+                    with urlopen(request) as response:
+                        payload = json.loads(response.read().decode("utf-8"))
+                self.assertEqual(payload["status"], "ok")
+                self.assertEqual(payload["seed"], seed)
+                self.assertIsNone(
+                    store.claim_due_seed(now=now + index_server.CRAWL_INTERVAL_SECONDS - 1)
+                )
+                self.assertEqual(
+                    store.claim_due_seed(now=now + index_server.CRAWL_INTERVAL_SECONDS),
+                    seed,
+                )
+            finally:
+                httpd.shutdown()
+                httpd.server_close()
+                thread.join(timeout=2)
+                index_server.API_KEY = original_key
 
     def test_public_url_validation_rejects_unsafe_destinations(self):
         for value in (
