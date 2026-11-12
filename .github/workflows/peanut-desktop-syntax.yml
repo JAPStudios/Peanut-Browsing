@@ -123,6 +123,145 @@ jobs:
             docker rm -f "$container" >/dev/null 2>&1 || true
           }
           trap cleanup EXIT
+          docker run -d --name "$container" -p 18082:10000 -e "PEANUT_SEARCH_API_KEY=$PEANUT_SEARCH_API_KEY" -e "PEANUT_INDEX_HOST=$PEANUT_INDEX_HOST" -e 'NGINX_ENVSUBST_FILTER=^(PEANUT_SEARCH_API_KEY|PEANUT_INDEX_HOST)      - name: Install Render blueprint validation dependency
+        run: python -m pip install PyYAML
+      - name: Validate Render deployment blueprint
+        run: python services/search/test_render_blueprint.py
+      - name: Build Render search gateway container
+        run: docker build -f services/search/gateway/Dockerfile -t peanut-browsing-render-gateway:ci services/search/gateway
+      - name: Smoke-test Render search gateway
+        env:
+          PEANUT_SEARCH_API_KEY: ci-placeholder-key
+          PEANUT_INDEX_HOST: index:8081
+        run: |
+          set -eu
+          container="peanut-render-gateway-ci"
+          cleanup() {
+            docker rm -f "$container" >/dev/null 2>&1 || true
+          }
+          trap cleanup EXIT
+          docker run -d --name "$container" -p 18082:10000 \
+            -e PEANUT_SEARCH_API_KEY="$PEANUT_SEARCH_API_KEY" \
+            -e PEANUT_INDEX_HOST="$PEANUT_INDEX_HOST" \
+            -e NGINX_ENVSUBST_FILTER='^(PEANUT_SEARCH_API_KEY|PEANUT_INDEX_HOST)      - name: Validate Nginx first-party search gateway
+        env:
+          PEANUT_SEARCH_API_KEY: ci-placeholder-key
+        run: |
+          docker run --rm --add-host index:127.0.0.1 --entrypoint /bin/sh \
+            -e PEANUT_SEARCH_API_KEY="$PEANUT_SEARCH_API_KEY" \
+            -v "$PWD/services/search/gateway/default.conf.template:/tmp/default.conf.template:ro" \
+            nginx:1.29-alpine -c "apk add --no-cache gettext >/dev/null && envsubst '\$PEANUT_SEARCH_API_KEY' < /tmp/default.conf.template > /etc/nginx/conf.d/default.conf && nginx -t"
+      - name: Exercise first-party search gateway end to end
+        env:
+          PEANUT_SEARCH_API_KEY: ci-placeholder-key
+          PEANUT_SEARCH_GATEWAY_PORT: "18081"
+        run: |
+          set -eu
+          project="peanut-ci-$GITHUB_RUN_ID"
+          compose="docker compose -p $project -f services/search/docker-compose.production.yml"
+          cleanup() {
+            $compose down --volumes --remove-orphans
+          }
+          trap cleanup EXIT
+          $compose up -d --build
+          ready=0
+          for attempt in $(seq 1 30); do
+            if curl --fail --silent http://127.0.0.1:18081/healthz >/dev/null; then
+              ready=1
+              break
+            fi
+            sleep 2
+          done
+          test "$ready" -eq 1
+          unauthorized=$(curl --silent --output /dev/null --write-out "%{http_code}" \
+            "http://127.0.0.1:18081/index/search?q=peanut")
+          test "$unauthorized" = "401"
+          $compose exec -T index python -c "from server import IndexStore; store = IndexStore('/data/index.sqlite'); store.upsert('https://peanut.example/', 'Peanut Browsing', 'First-party privacy search test record')"
+          curl --fail --silent --show-error \
+            -H "X-API-Key: $PEANUT_SEARCH_API_KEY" \
+            "http://127.0.0.1:18081/index/search?q=privacy" \
+            | python -c "import json,sys; payload=json.load(sys.stdin); assert payload['status']=='ok'; assert payload['totalResults']==1; assert payload['results'][0]['url']=='https://peanut.example/'; print('Authenticated first-party search returned the seeded result.')"
+ \
+            peanut-browsing-render-gateway:ci
+          ready=0
+          for attempt in $(seq 1 20); do
+            if curl --fail --silent http://127.0.0.1:18082/healthz >/dev/null; then
+              ready=1
+              break
+            fi
+            sleep 1
+          done
+          test "$ready" -eq 1
+          unauthorized=$(curl --silent --output /dev/null --write-out "%{http_code}" \
+            "http://127.0.0.1:18082/index/search?q=peanut")
+          test "$unauthorized" = "401"
+      - name: Validate Nginx first-party search gateway
+        env:
+          PEANUT_SEARCH_API_KEY: ci-placeholder-key
+        run: |
+          docker run --rm --add-host index:127.0.0.1 --entrypoint /bin/sh \
+            -e PEANUT_SEARCH_API_KEY="$PEANUT_SEARCH_API_KEY" \
+            -v "$PWD/services/search/gateway/default.conf.template:/tmp/default.conf.template:ro" \
+            nginx:1.29-alpine -c "apk add --no-cache gettext >/dev/null && envsubst '\$PEANUT_SEARCH_API_KEY' < /tmp/default.conf.template > /etc/nginx/conf.d/default.conf && nginx -t"
+      - name: Exercise first-party search gateway end to end
+        env:
+          PEANUT_SEARCH_API_KEY: ci-placeholder-key
+          PEANUT_SEARCH_GATEWAY_PORT: "18081"
+        run: |
+          set -eu
+          project="peanut-ci-$GITHUB_RUN_ID"
+          compose="docker compose -p $project -f services/search/docker-compose.production.yml"
+          cleanup() {
+            $compose down --volumes --remove-orphans
+          }
+          trap cleanup EXIT
+          $compose up -d --build
+          ready=0
+          for attempt in $(seq 1 30); do
+            if curl --fail --silent http://127.0.0.1:18081/healthz >/dev/null; then
+              ready=1
+              break
+            fi
+            sleep 2
+          done
+          test "$ready" -eq 1
+          unauthorized=$(curl --silent --output /dev/null --write-out "%{http_code}" \
+            "http://127.0.0.1:18081/index/search?q=peanut")
+          test "$unauthorized" = "401"
+          $compose exec -T index python -c "from server import IndexStore; store = IndexStore('/data/index.sqlite'); store.upsert('https://peanut.example/', 'Peanut Browsing', 'First-party privacy search test record')"
+          curl --fail --silent --show-error \
+            -H "X-API-Key: $PEANUT_SEARCH_API_KEY" \
+            "http://127.0.0.1:18081/index/search?q=privacy" \
+            | python -c "import json,sys; payload=json.load(sys.stdin); assert payload['status']=='ok'; assert payload['totalResults']==1; assert payload['results'][0]['url']=='https://peanut.example/'; print('Authenticated first-party search returned the seeded result.')"
+ peanut-browsing-render-gateway:ci
+          ready=0
+          for attempt in $(seq 1 20); do
+            if curl --fail --silent http://127.0.0.1:18082/healthz >/dev/null; then
+              ready=1
+              break
+            fi
+            sleep 1
+          done
+          test "$ready" -eq 1
+          unauthorized=$(curl --silent --output /dev/null --write-out "%{http_code}" "http://127.0.0.1:18082/index/search?q=peanut")
+          test "$unauthorized" = "401"
+      - name: Install Render blueprint validation dependency
+        run: python -m pip install PyYAML
+      - name: Validate Render deployment blueprint
+        run: python services/search/test_render_blueprint.py
+      - name: Build Render search gateway container
+        run: docker build -f services/search/gateway/Dockerfile -t peanut-browsing-render-gateway:ci services/search/gateway
+      - name: Smoke-test Render search gateway
+        env:
+          PEANUT_SEARCH_API_KEY: ci-placeholder-key
+          PEANUT_INDEX_HOST: index:8081
+        run: |
+          set -eu
+          container="peanut-render-gateway-ci"
+          cleanup() {
+            docker rm -f "$container" >/dev/null 2>&1 || true
+          }
+          trap cleanup EXIT
           docker run -d --name "$container" -p 18082:10000 \
             -e PEANUT_SEARCH_API_KEY="$PEANUT_SEARCH_API_KEY" \
             -e PEANUT_INDEX_HOST="$PEANUT_INDEX_HOST" \
