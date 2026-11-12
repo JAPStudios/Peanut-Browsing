@@ -440,6 +440,7 @@ def crawl_site(seed_url: str, max_pages: int, store: IndexStore):
     indexed = 0
     visited = 0
     max_pages_per_origin = 3
+    seed_host = (origin_parts.hostname or "").lower()
 
     while queue and visited < max_pages:
         current = queue.popleft()
@@ -457,7 +458,8 @@ def crawl_site(seed_url: str, max_pages: int, store: IndexStore):
             continue
 
         host_key = (parts.hostname or "").lower()
-        if visits_by_origin.get(host_key, 0) >= max_pages_per_origin:
+        host_page_limit = max_pages if host_key == seed_host else max_pages_per_origin
+        if visits_by_origin.get(host_key, 0) >= host_page_limit:
             continue
         crawl_delay = current_robots.crawl_delay(USER_AGENT) or current_robots.crawl_delay("*") or 0.5
         delay = min(max(float(crawl_delay), 0.5), 5.0)
@@ -486,8 +488,9 @@ def crawl_site(seed_url: str, max_pages: int, store: IndexStore):
                     continue
                 candidate_parts = urlsplit(candidate)
                 candidate_host = (candidate_parts.hostname or "").lower()
+                candidate_page_limit = max_pages if candidate_host == seed_host else max_pages_per_origin
                 if (candidate not in queued and len(queued) < max_pages * 12
-                        and visits_by_origin.get(candidate_host, 0) < max_pages_per_origin):
+                        and visits_by_origin.get(candidate_host, 0) < candidate_page_limit):
                     queued.add(candidate)
                     queue.append(candidate)
         except (HTTPError, URLError, OSError, ValueError):
