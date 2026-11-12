@@ -28,7 +28,7 @@ Do not expose the gateway without HTTPS. Do not commit the production `.env` fil
 
 The repository-root `render.yaml` defines a private first-party index service with persistent `/data` storage and a public Nginx gateway. Render generates the shared API key on the private service and passes it to the gateway through an internal service reference; no key is stored in Git. Automatic deployments are disabled in the Blueprint.
 
-Creating the Blueprint provisions paid compute and a persistent disk. Review the current Render plan and disk charges before creating the services. After deployment, set these Wix Secrets Manager entries:
+Creating the Blueprint provisions a paid index service and a 10 GB persistent disk. The gateway is initially configured on Render's free plan, which spins down after inactivity and can take about a minute to restart; that is suitable for a deployment test, not a latency-sensitive production search service. Review current compute and disk charges before creating the services. After deployment, set these Wix Secrets Manager entries:
 
 - `PEANUT_SEARCH_API_URL` — the public HTTPS origin of the Render gateway.
 - `PEANUT_SEARCH_API_KEY` — the same generated key used by the Render index and gateway.
