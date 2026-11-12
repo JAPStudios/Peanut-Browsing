@@ -1,0 +1,49 @@
+name: Peanut Browsing desktop packages
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - "apps/desktop/**"
+      - ".github/workflows/peanut-desktop-build.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  package:
+    name: Package ${{ matrix.platform }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            platform: linux
+            script: package:linux
+          - os: windows-latest
+            platform: windows
+            script: package:win
+          - os: macos-latest
+            platform: macos
+            script: package:mac
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install desktop dependencies
+        working-directory: apps/desktop
+        run: npm install --package-lock=false --no-audit --no-fund
+      - name: Build desktop installer
+        working-directory: apps/desktop
+        run: npm run ${{ matrix.script }}
+      - name: Upload installer artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: peanut-browsing-${{ matrix.platform }}
+          path: apps/desktop/release/*
+          if-no-files-found: error
+          retention-days: 14
