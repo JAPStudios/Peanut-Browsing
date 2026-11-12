@@ -66,6 +66,8 @@ jobs:
         run: node --check apps/desktop/src/search.js
       - name: Check sitemap utilities
         run: node --check apps/desktop/src/sitemap-utils.cjs
+      - name: Check CSS asset discovery
+        run: node --check apps/desktop/src/asset-references.cjs
       - name: Check page version merger
         run: node --check apps/desktop/src/page-record.cjs
       - name: Check library interface
