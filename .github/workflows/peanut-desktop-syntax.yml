@@ -117,34 +117,43 @@ jobs:
       - name: Smoke-test Render search gateway
         env:
           PEANUT_SEARCH_API_KEY: ci-placeholder-key
-          PEANUT_INDEX_HOST: index:8081
+          PEANUT_INDEX_HOST: peanut-render-index-ci:8081
           NGINX_ENVSUBST_FILTER: PEANUT_SEARCH_API_KEY|PEANUT_INDEX_HOST
         run: |
           set -eu
-          container="peanut-render-gateway-ci"
+          network="peanut-render-ci"
+          index="peanut-render-index-ci"
+          gateway="peanut-render-gateway-ci"
           cleanup() {
-            docker rm -f "$container" >/dev/null 2>&1 || true
+            docker rm -f "$gateway" "$index" >/dev/null 2>&1 || true
+            docker network rm "$network" >/dev/null 2>&1 || true
           }
           trap cleanup EXIT
-          docker run -d --name "$container" -p 18082:10000 -e "PEANUT_SEARCH_API_KEY=$PEANUT_SEARCH_API_KEY" -e "PEANUT_INDEX_HOST=$PEANUT_INDEX_HOST" -e "NGINX_ENVSUBST_FILTER=$NGINX_ENVSUBST_FILTER" peanut-browsing-render-gateway:ci
-          ready=0
+          docker network create "$network" >/dev/null
+          docker run -d --name "$index" --network "$network" -p 18083:8081 -e "PEANUT_SEARCH_API_KEY=$PEANUT_SEARCH_API_KEY" -e INDEX_DB_PATH=/data/index.sqlite peanut-browsing-index:ci
+          index_ready=0
           for attempt in $(seq 1 20); do
-            if curl --fail --silent http://127.0.0.1:18082/healthz >/dev/null; then
-              ready=1
+            if curl --fail --silent http://127.0.0.1:18083/healthz >/dev/null; then
+              index_ready=1
               break
             fi
             sleep 1
           done
-          if [ "$ready" -ne 1 ]; then
-            docker logs "$container" || true
-            docker inspect "$container" || true
-            exit 1
-          fi
-          unauthorized=$(curl --silent --output /dev/null --write-out "%{http_code}" "http://127.0.0.1:18082/index/search?q=peanut")
-          if [ "$unauthorized" != "401" ]; then
-            docker logs "$container" || true
-            exit 1
-          fi
+          if [ "$index_ready" -ne 1 ]; then docker logs "$index"; exit 1; fi
+          docker exec "$index" python -c "from server import IndexStore; store = IndexStore('/data/index.sqlite'); store.upsert('https://peanut.example/', 'Peanut Browsing', 'First-party privacy search test record')"
+          docker run -d --name "$gateway" --network "$network" -p 18082:10000 -e "PEANUT_SEARCH_API_KEY=$PEANUT_SEARCH_API_KEY" -e "PEANUT_INDEX_HOST=$PEANUT_INDEX_HOST" -e "NGINX_ENVSUBST_FILTER=$NGINX_ENVSUBST_FILTER" peanut-browsing-render-gateway:ci
+          gateway_ready=0
+          for attempt in $(seq 1 20); do
+            if curl --fail --silent http://127.0.0.1:18082/healthz >/dev/null; then
+              gateway_ready=1
+              break
+            fi
+            sleep 1
+          done
+          if [ "$gateway_ready" -ne 1 ]; then docker logs "$gateway"; exit 1; fi
+          unauthorized=$(curl --silent --output /dev/null --write-out "%{http_code}" "http://127.0.0.1:18082/index/search?q=privacy")
+          test "$unauthorized" = "401"
+          curl --fail --silent --show-error -H "X-API-Key: $PEANUT_SEARCH_API_KEY" "http://127.0.0.1:18082/index/search?q=privacy" | python -c "import json,sys; payload=json.load(sys.stdin); assert payload['status']=='ok'; assert payload['totalResults']==1; assert payload['results'][0]['url']=='https://peanut.example/'; print('Render gateway returned the authenticated first-party search result.')"
       - name: Validate Nginx first-party search gateway
         env:
           PEANUT_SEARCH_API_KEY: ci-placeholder-key
