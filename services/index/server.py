@@ -33,6 +33,7 @@ MAX_BODY_BYTES = 2 * 1024 * 1024
 MAX_TEXT_CHARS = 100_000
 DEFAULT_CRAWL_PAGES = 10
 MAX_CRAWL_PAGES = 25
+MAX_CRAWL_SEEDS = 1000
 CRAWL_INTERVAL_SECONDS = 24 * 60 * 60
 CRAWL_RETRY_SECONDS = 60 * 60
 CRAWL_SCHEDULER_INTERVAL_SECONDS = 60
@@ -317,8 +318,16 @@ class IndexStore:
     def register_seed(self, url: str, now: float | None = None):
         timestamp = time.time() if now is None else float(now)
         with self.connect() as connection:
+            existing = connection.execute(
+                "SELECT 1 FROM crawl_seeds WHERE url = ?", (url,)
+            ).fetchone()
+            if existing:
+                return
+            count = connection.execute("SELECT COUNT(*) FROM crawl_seeds").fetchone()[0]
+            if count >= MAX_CRAWL_SEEDS:
+                raise ValueError("The submitted website seed limit has been reached.")
             connection.execute(
-                "INSERT OR IGNORE INTO crawl_seeds "
+                "INSERT INTO crawl_seeds "
                 "(url, last_crawled_at, next_crawl_at, status, last_error) "
                 "VALUES (?, NULL, ?, 'pending', NULL)",
                 (url, timestamp),
@@ -356,6 +365,10 @@ class IndexStore:
     def count(self):
         with self.connect() as connection:
             return connection.execute("SELECT COUNT(*) FROM page_index").fetchone()[0]
+
+    def seed_count(self):
+        with self.connect() as connection:
+            return connection.execute("SELECT COUNT(*) FROM crawl_seeds").fetchone()[0]
 
     def search(self, query: str, limit: int = DEFAULT_SEARCH_LIMIT, offset: int = 0):
         if not isinstance(query, str) or len(query) > 200:
@@ -598,7 +611,11 @@ class SearchHandler(BaseHTTPRequestHandler):
     def do_GET(self):
         parsed = urlsplit(self.path)
         if parsed.path == "/healthz":
-            self.send_json(200, {"status": "ok", "indexedPages": self.server.store.count()})
+            self.send_json(200, {
+                "status": "ok",
+                "indexedPages": self.server.store.count(),
+                "scheduledSeeds": self.server.store.seed_count(),
+            })
             return
         if parsed.path != "/search":
             self.send_json(404, {"status": "error", "error": "Not found."})
