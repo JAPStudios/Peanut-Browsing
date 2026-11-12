@@ -16,6 +16,7 @@ import os
 import re
 import socket
 import sqlite3
+import threading
 import time
 import xml.etree.ElementTree as ET
 from collections import deque
@@ -31,6 +32,10 @@ MAX_BODY_BYTES = 2 * 1024 * 1024
 MAX_TEXT_CHARS = 100_000
 DEFAULT_CRAWL_PAGES = 10
 MAX_CRAWL_PAGES = 25
+CRAWL_INTERVAL_SECONDS = 24 * 60 * 60
+CRAWL_RETRY_SECONDS = 60 * 60
+CRAWL_SCHEDULER_INTERVAL_SECONDS = 60
+CRAWL_LEASE_SECONDS = 30 * 60
 MAX_SITEMAP_FILES = 10
 MAX_SITEMAP_URLS = 1000
 DEFAULT_SEARCH_LIMIT = 20
@@ -281,6 +286,11 @@ class IndexStore:
                 "CREATE VIRTUAL TABLE IF NOT EXISTS page_index "
                 "USING fts5(title, url UNINDEXED, body, tokenize='unicode61')"
             )
+            connection.execute(
+                "CREATE TABLE IF NOT EXISTS crawl_seeds ("
+                "url TEXT PRIMARY KEY, last_crawled_at REAL, next_crawl_at REAL NOT NULL, "
+                "status TEXT NOT NULL, last_error TEXT)"
+            )
 
     @contextmanager
     def connect(self):
@@ -301,6 +311,45 @@ class IndexStore:
             connection.execute(
                 "INSERT INTO page_index(title, url, body) VALUES (?, ?, ?)",
                 (title[:500], url, body[:MAX_TEXT_CHARS]),
+            )
+
+    def register_seed(self, url: str, now: float | None = None):
+        timestamp = time.time() if now is None else float(now)
+        with self.connect() as connection:
+            connection.execute(
+                "INSERT OR IGNORE INTO crawl_seeds "
+                "(url, last_crawled_at, next_crawl_at, status, last_error) "
+                "VALUES (?, NULL, ?, 'pending', NULL)",
+                (url, timestamp),
+            )
+
+    def claim_due_seed(self, now: float | None = None, lease_seconds: int = CRAWL_LEASE_SECONDS):
+        timestamp = time.time() if now is None else float(now)
+        with self.connect() as connection:
+            row = connection.execute(
+                "SELECT url FROM crawl_seeds WHERE next_crawl_at <= ? "
+                "ORDER BY next_crawl_at, url LIMIT 1",
+                (timestamp,),
+            ).fetchone()
+            if row is None:
+                return None
+            seed_url = row["url"]
+            connection.execute(
+                "UPDATE crawl_seeds SET next_crawl_at = ?, status = 'crawling', last_error = NULL "
+                "WHERE url = ? AND next_crawl_at <= ?",
+                (timestamp + lease_seconds, seed_url, timestamp),
+            )
+            return seed_url
+
+    def finish_seed(self, url: str, success: bool, error: str | None = None, now: float | None = None):
+        timestamp = time.time() if now is None else float(now)
+        interval = CRAWL_INTERVAL_SECONDS if success else CRAWL_RETRY_SECONDS
+        status = "ok" if success else "error"
+        with self.connect() as connection:
+            connection.execute(
+                "UPDATE crawl_seeds SET last_crawled_at = ?, next_crawl_at = ?, "
+                "status = ?, last_error = ? WHERE url = ?",
+                (timestamp, timestamp + interval, status, (error or "")[:1000] or None, url),
             )
 
     def count(self):
@@ -501,6 +550,31 @@ def crawl_site(seed_url: str, max_pages: int, store: IndexStore):
             "originsChecked": len(robots_by_origin)}
 
 
+def recrawl_one_due_seed(store: IndexStore, now: float | None = None):
+    seed_url = store.claim_due_seed(now=now)
+    if seed_url is None:
+        return None
+    try:
+        result = crawl_site(seed_url, MAX_CRAWL_PAGES, store)
+    except Exception as error:
+        store.finish_seed(seed_url, success=False, error=str(error), now=now)
+        return {"seed": seed_url, "status": "error", "error": str(error)}
+    success = result.get("indexed", 0) > 0
+    store.finish_seed(seed_url, success=success, now=now)
+    return {"seed": seed_url, "status": "ok" if success else "empty", **result}
+
+
+def crawl_scheduler(server):
+    while True:
+        try:
+            with server.crawl_lock:
+                recrawl_one_due_seed(server.store)
+        except Exception:
+            # A transient database or crawl error must not terminate the scheduler.
+            pass
+        time.sleep(CRAWL_SCHEDULER_INTERVAL_SECONDS)
+
+
 class SearchHandler(BaseHTTPRequestHandler):
 
     def log_message(self, format_string, *args):
@@ -555,11 +629,18 @@ class SearchHandler(BaseHTTPRequestHandler):
             payload = json.loads(self.rfile.read(length).decode("utf-8"))
             if not isinstance(payload, dict):
                 raise ValueError("The crawl request must be a JSON object.")
-            seed_url = payload.get("url")
+            seed_url = validate_public_url(payload.get("url"))
             max_pages = int(payload.get("maxPages", DEFAULT_CRAWL_PAGES))
             if not 1 <= max_pages <= MAX_CRAWL_PAGES:
                 raise ValueError("maxPages must be between 1 and 25.")
-            result = crawl_site(seed_url, max_pages, self.server.store)
+            with self.server.crawl_lock:
+                self.server.store.register_seed(seed_url)
+                try:
+                    result = crawl_site(seed_url, max_pages, self.server.store)
+                except Exception as error:
+                    self.server.store.finish_seed(seed_url, success=False, error=str(error))
+                    raise
+                self.server.store.finish_seed(seed_url, success=result.get("indexed", 0) > 0)
             self.send_json(200, {"status": "ok", "seed": seed_url, **result})
         except (ValueError, TypeError, json.JSONDecodeError, sqlite3.Error) as error:
             self.send_json(400, {"status": "error", "error": str(error)})
@@ -575,6 +656,9 @@ def main():
         raise SystemExit("PEANUT_SEARCH_API_KEY must be configured.")
     server = ThreadingHTTPServer(("0.0.0.0", 8081), SearchHandler)
     server.store = IndexStore(DATABASE_PATH)
+    server.crawl_lock = threading.Lock()
+    scheduler = threading.Thread(target=crawl_scheduler, args=(server,), daemon=True)
+    scheduler.start()
     server.serve_forever()
 
 
