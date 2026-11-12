@@ -11,7 +11,7 @@ class RenderBlueprintTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         with (ROOT / "render.yaml").open(encoding="utf-8") as stream:
-            cls.blueprint = yaml.safe_load(stream)
+            cls.blueprint = yaml.load(stream, Loader=yaml.BaseLoader)
         cls.services = {service["name"]: service for service in cls.blueprint["services"]}
 
     def test_index_service_uses_persistent_storage_and_generated_key(self):
