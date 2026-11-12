@@ -4,6 +4,7 @@ const path = require('node:path');
 const { app, BrowserWindow } = require('electron');
 const { normalizeHttpUrl, normalizeAssetUrl, parseSitemapDeclarations, extractSitemapLocations, assertPublicHostname } = require('./sitemap-utils.cjs');
 const { mergeImportedPage } = require('./page-record.cjs');
+const { extractCssAssetReferences } = require('./asset-references.cjs');
 
 const MAX_PAGES = 250;
 const MAX_HTML_CHARS = 350000;
@@ -249,6 +250,13 @@ async function downloadAsset(browserSession, value, origin, directory, assetStat
             };
             assetState.totalBytes += bytes.length;
             assetState.byUrl.set(assetUrl.href, record);
+
+            if (contentType === 'text/css') {
+                const nestedReferences = extractCssAssetReferences(bytes.toString('utf8'), assetUrl.href);
+                for (const reference of nestedReferences) {
+                    await downloadAsset(browserSession, reference, origin, directory, assetState);
+                }
+            }
             return record;
         } catch {
             return null;
