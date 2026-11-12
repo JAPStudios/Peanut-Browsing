@@ -244,6 +244,71 @@ class SearchIndexTests(unittest.TestCase):
         self.assertEqual(len([url for url in store.pages if "seed.example" in url]), 5)
         self.assertEqual(len([url for url in store.pages if "linked.example" in url]), 3)
 
+    def test_seed_schedule_claims_and_reschedules_successful_crawls(self):
+        with tempfile.TemporaryDirectory() as directory:
+            store = IndexStore(os.path.join(directory, "index.sqlite"))
+            seed = "https://example.org/"
+            now = 1_000_000
+            store.register_seed(seed, now=now)
+            self.assertEqual(store.claim_due_seed(now=now), seed)
+            self.assertIsNone(store.claim_due_seed(now=now + 1))
+            store.finish_seed(seed, success=True, now=now)
+            self.assertIsNone(
+                store.claim_due_seed(now=now + index_server.CRAWL_INTERVAL_SECONDS - 1)
+            )
+            self.assertEqual(
+                store.claim_due_seed(now=now + index_server.CRAWL_INTERVAL_SECONDS),
+                seed,
+            )
+
+    def test_failed_seed_is_retried_after_the_shorter_retry_interval(self):
+        with tempfile.TemporaryDirectory() as directory:
+            store = IndexStore(os.path.join(directory, "index.sqlite"))
+            seed = "https://example.org/"
+            now = 2_000_000
+            store.register_seed(seed, now=now)
+            self.assertEqual(store.claim_due_seed(now=now), seed)
+            store.finish_seed(seed, success=False, error="robots unavailable", now=now)
+            self.assertIsNone(
+                store.claim_due_seed(now=now + index_server.CRAWL_RETRY_SECONDS - 1)
+            )
+            self.assertEqual(
+                store.claim_due_seed(now=now + index_server.CRAWL_RETRY_SECONDS),
+                seed,
+            )
+
+    def test_recrawl_worker_updates_seed_schedule_after_success(self):
+        with tempfile.TemporaryDirectory() as directory:
+            store = IndexStore(os.path.join(directory, "index.sqlite"))
+            seed = "https://example.org/"
+            now = 3_000_000
+            store.register_seed(seed, now=now)
+            with patch("server.crawl_site", return_value={"visited": 2, "indexed": 2}) as crawler:
+                result = index_server.recrawl_one_due_seed(store, now=now)
+            crawler.assert_called_once_with(seed, index_server.MAX_CRAWL_PAGES, store)
+            self.assertEqual(result["status"], "ok")
+            self.assertIsNone(
+                store.claim_due_seed(now=now + index_server.CRAWL_INTERVAL_SECONDS - 1)
+            )
+
+    def test_recrawl_worker_retries_failed_seed(self):
+        with tempfile.TemporaryDirectory() as directory:
+            store = IndexStore(os.path.join(directory, "index.sqlite"))
+            seed = "https://example.org/"
+            now = 4_000_000
+            store.register_seed(seed, now=now)
+            with patch("server.crawl_site", side_effect=ValueError("robots unavailable")):
+                result = index_server.recrawl_one_due_seed(store, now=now)
+            self.assertEqual(result["status"], "error")
+            self.assertEqual(result["error"], "robots unavailable")
+            self.assertIsNone(
+                store.claim_due_seed(now=now + index_server.CRAWL_RETRY_SECONDS - 1)
+            )
+            self.assertEqual(
+                store.claim_due_seed(now=now + index_server.CRAWL_RETRY_SECONDS),
+                seed,
+            )
+
     def test_public_url_validation_rejects_unsafe_destinations(self):
         for value in (
             "file:///etc/passwd",
