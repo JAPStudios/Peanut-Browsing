@@ -16,15 +16,10 @@ function addReference(references, value, baseUrl) {
 function extractCssAssetReferences(css, baseUrl, limit = MAX_CSS_REFERENCES) {
     const references = new Set();
     const source = String(css).replace(/\/\*[\s\S]*?\*\//g, '');
-    const urlPattern = /url\(\s*(?:(["'])(.*?)\1|([^)]*?))\s*\)/gi;
+    const referencePattern = /@import\s+["']([^"']+)["']|url\(\s*(?:(["'])(.*?)\2|([^)]*?))\s*\)/gi;
     let match;
-    while ((match = urlPattern.exec(source)) && references.size < limit) {
-        addReference(references, match[2] ?? match[3], baseUrl);
-    }
-
-    const importPattern = /@import\s+(["'])(.*?)\1/gi;
-    while ((match = importPattern.exec(source)) && references.size < limit) {
-        addReference(references, match[2], baseUrl);
+    while ((match = referencePattern.exec(source)) && references.size < limit) {
+        addReference(references, match[1] ?? match[3] ?? match[4], baseUrl);
     }
     return Array.from(references);
 }
