@@ -323,7 +323,6 @@ class SearchIndexTests(unittest.TestCase):
             thread.start()
             base = "http://127.0.0.1:" + str(httpd.server_address[1])
             seed = "https://example.org/"
-            now = time.time()
             try:
                 body = json.dumps({"url": seed, "maxPages": 5}).encode("utf-8")
                 request = Request(
@@ -341,6 +340,7 @@ class SearchIndexTests(unittest.TestCase):
                         payload = json.loads(response.read().decode("utf-8"))
                 self.assertEqual(payload["status"], "ok")
                 self.assertEqual(payload["seed"], seed)
+                now = time.time()
                 self.assertIsNone(
                     store.claim_due_seed(now=now + index_server.CRAWL_INTERVAL_SECONDS - 1)
                 )
