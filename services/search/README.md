@@ -26,4 +26,4 @@ Do not expose the gateway without HTTPS. Do not commit the production `.env` fil
 
 ## Index scope
 
-The crawler accepts explicitly submitted public website addresses, checks and obeys `robots.txt`, stays on each submitted website's origin, rejects private/local targets, and limits each crawl to 25 pages. Pages are stored in SQLite FTS5 and ranked with BM25. It is an independent first-party search index, but it is not yet a continuously discovered, web-scale index.
+The crawler accepts explicitly submitted public website addresses, checks and obeys `robots.txt`, keeps sitemap discovery on the submitted origin, follows public links to other origins under per-origin robots and crawl-delay rules, rejects private/local targets, and limits each crawl to 25 pages. The submitted seed host may use the full page budget; each linked external host is capped at 3 pages. Pages are stored in SQLite FTS5 and ranked with BM25. It is an independent first-party search index, but it is not yet a continuously discovered, web-scale index.
