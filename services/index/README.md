@@ -16,7 +16,7 @@ This is Peanut Browsing's own searchable page index. Search uses SQLite FTS5 wit
 - Rank matching pages using SQLite's BM25 implementation.
 - Require the search gateway API key for search and crawl requests.
 
-The crawler reads up to 10 sitemap documents and discovers up to 1,000 same-origin sitemap URLs per submission. It then follows public links, allowing the submitted seed host to use the requested crawl budget and limiting each linked external host to 3 pages. It still does not automatically discover the entire public web. A website must be submitted as a seed before its pages can appear in search results.
+The crawler reads up to 10 sitemap documents and discovers up to 1,000 same-origin sitemap URLs per submission. It then follows public links, allowing the submitted seed host to use the requested crawl budget and limiting each linked external host to 3 pages. It still does not automatically discover the entire public web. A website must be submitted as a seed before its pages can appear in search results. Successfully indexed seeds are saved and recrawled every 24 hours; failed recrawls are retried after one hour.
 
 ## API
 
