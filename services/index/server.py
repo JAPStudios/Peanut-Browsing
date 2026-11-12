@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 """Small, first-party website index for Peanut Browsing.
 
-The service indexes pages from explicitly submitted seed sites. It respects
-robots.txt, stays on the seed origin, rejects private/local targets, and
-requires the shared gateway key for search and crawl operations.
+The service indexes explicitly submitted seed sites, follows public links under
+per-origin robots and crawl limits, and periodically refreshes saved seeds.
+It rejects private/local targets and requires the shared gateway key for
+search and crawl operations.
 """
 from __future__ import annotations
 
