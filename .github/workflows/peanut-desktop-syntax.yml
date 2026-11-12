@@ -135,9 +135,16 @@ jobs:
             fi
             sleep 1
           done
-          test "$ready" -eq 1
+          if [ "$ready" -ne 1 ]; then
+            docker logs "$container" || true
+            docker inspect "$container" || true
+            exit 1
+          fi
           unauthorized=$(curl --silent --output /dev/null --write-out "%{http_code}" "http://127.0.0.1:18082/index/search?q=peanut")
-          test "$unauthorized" = "401"
+          if [ "$unauthorized" != "401" ]; then
+            docker logs "$container" || true
+            exit 1
+          fi
       - name: Validate Nginx first-party search gateway
         env:
           PEANUT_SEARCH_API_KEY: ci-placeholder-key
