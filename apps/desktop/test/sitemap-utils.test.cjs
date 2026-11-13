@@ -133,7 +133,7 @@ test('parses wildcard robots groups and ignores unrelated user-agent groups', ()
         'Disallow: /private/',
         'Allow: /private/public/',
         'Disallow: /*.pdf$'
-    ].join('\\n'));
+    ].join('\n'));
     assert.deepEqual(rules, [
         { allow: false, path: '/private/' },
         { allow: true, path: '/private/public/' },
@@ -148,7 +148,7 @@ test('applies the most specific robots rule and gives Allow precedence on equal 
         'Allow: /private/public/',
         'Disallow: /files/*.pdf$',
         'Allow: /files/report.pdf$'
-    ].join('\\n'));
+    ].join('\n'));
     assert.equal(isAllowedByRobots('https://example.test/private/page', rules), false);
     assert.equal(isAllowedByRobots('https://example.test/private/public/page', rules), true);
     assert.equal(isAllowedByRobots('https://example.test/files/report.pdf', rules), true);
@@ -157,7 +157,7 @@ test('applies the most specific robots rule and gives Allow precedence on equal 
 });
 
 test('allows all paths when robots.txt has no applicable wildcard rules', () => {
-    const rules = parseRobotsRules('User-agent: ExampleBot\\nDisallow: /');
+    const rules = parseRobotsRules('User-agent: ExampleBot\nDisallow: /');
     assert.equal(isAllowedByRobots('https://example.test/page', rules), true);
     assert.equal(isAllowedByRobots('not a URL', rules), false);
 });
