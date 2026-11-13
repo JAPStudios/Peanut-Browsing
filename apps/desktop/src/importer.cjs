@@ -42,7 +42,9 @@ async function extractPage(windowRef) {
         const description = document.querySelector('meta[name="description"], meta[property="og:description"]');
         const canonical = document.querySelector('link[rel~="canonical"]');
         const resolveReference = value => {
-            try { return new URL(value, document.baseURI).href; } catch { return ''; }
+            const reference = String(value || '').trim();
+            if (!reference) return '';
+            try { return new URL(reference, document.baseURI).href; } catch { return ''; }
         };
         return {
             url: location.href,
