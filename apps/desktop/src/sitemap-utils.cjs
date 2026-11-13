@@ -184,21 +184,4 @@ function isAllowedByRobots(value, rules) {
     return !best || best.allow;
 }
 
-module.exports = { normalizeHttpUrl, normalizeAssetUrl, parseSitemapDeclarations, parseRobotsRules, isAllowedByRobots, decodeXml, extractSitemapLocations, isPublicAddress, assertPublicHostname };').replace(/\\*/g, '.*');
-        let expression;
-        try {
-            expression = new RegExp('^' + escaped + (terminal ? ' : ''));
-        } catch {
-            continue;
-        }
-        if (!expression.test(target)) continue;
-        const specificity = pattern.replace(/\\*/g, '').length;
-        if (!best || specificity > best.specificity ||
-            (specificity === best.specificity && rule.allow)) {
-            best = { specificity, allow: Boolean(rule.allow) };
-        }
-    }
-    return !best || best.allow;
-}
-
 module.exports = { normalizeHttpUrl, normalizeAssetUrl, parseSitemapDeclarations, parseRobotsRules, isAllowedByRobots, decodeXml, extractSitemapLocations, isPublicAddress, assertPublicHostname };
