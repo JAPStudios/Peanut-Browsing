@@ -48,7 +48,6 @@ body { margin: 0; overflow: hidden; }
 .close-tab { display: inline-grid; place-items: center; width: 24px; height: 24px; border: 0; background: transparent; color: #626a75; font: inherit; cursor: pointer; padding: 0; border-radius: 4px; }
 .close-tab:hover { background: #d6d9df; }
 .close-tab:focus-visible { outline: 2px solid #245b9a; outline-offset: 1px; }
-.close-tab:focus-visible { outline: 2px solid #245b9a; outline-offset: 1px; }
 .new-tab, .nav-button, .go-button { border: 1px solid #d2d7df; background: #fff; color: #343943; cursor: pointer; }
 .new-tab { width: 28px; height: 27px; border-radius: 7px; font-size: 19px; line-height: 18px; }
 .navigation { display: flex; align-items: center; gap: 7px; height: 38px; }
