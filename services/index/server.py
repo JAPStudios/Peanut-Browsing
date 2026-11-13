@@ -284,6 +284,7 @@ class IndexStore:
         if path != ":memory:":
             os.makedirs(os.path.dirname(path) or ".", exist_ok=True)
         with self.connect() as connection:
+            connection.execute("PRAGMA journal_mode=WAL")
             connection.execute(
                 "CREATE VIRTUAL TABLE IF NOT EXISTS page_index "
                 "USING fts5(title, url UNINDEXED, body, tokenize='unicode61')"
