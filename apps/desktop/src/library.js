@@ -3,6 +3,7 @@ const sitesElement = document.getElementById('sites');
 const pagesElement = document.getElementById('pages');
 const bookmarksElement = document.getElementById('bookmarks');
 const historyElement = document.getElementById('history');
+const historySearchInput = document.getElementById('history-search');
 const statusElement = document.getElementById('status');
 const emptyState = document.getElementById('empty-state');
 const editor = document.getElementById('page-editor');
@@ -124,10 +125,18 @@ function renderProfile() {
             statusElement.textContent = 'Bookmark removed.';
         }
     )));
-    historyElement.replaceChildren(...profile.history.map(item => makeSavedRow(
+    const historyQuery = historySearchInput.value.trim().toLocaleLowerCase();
+    const visibleHistory = profile.history.filter(item => !historyQuery ||
+        (item.title + ' ' + item.url).toLocaleLowerCase().includes(historyQuery));
+    historyElement.replaceChildren(...visibleHistory.map(item => makeSavedRow(
         item.title || 'Visited page',
-        item.url,
-        () => api.openSavedUrl(item.url)
+        item.url + ' · ' + new Date(item.visitedAt).toLocaleString(),
+        () => api.openSavedUrl(item.url),
+        async () => {
+            profile = await api.removeHistoryEntry({ url: item.url, visitedAt: item.visitedAt });
+            renderProfile();
+            statusElement.textContent = 'History entry removed.';
+        }
     )));
 }
 
@@ -410,6 +419,8 @@ api.onImportProgress(progress => {
         ? sitePrefix + 'checking robots.txt and sitemap indexes…'
         : sitePrefix + 'captured ' + progress.completed + ' page(s).';
 });
+historySearchInput.addEventListener('input', renderProfile);
+
 document.getElementById('clear-history').addEventListener('click', async () => {
     profile = await api.clearHistory();
     renderProfile();
