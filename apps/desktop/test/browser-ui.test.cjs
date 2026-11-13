@@ -24,7 +24,7 @@ test('browser tabs use keyboard-operable tab semantics and a real close button',
     assert.match(makeTab, /event\.key === 'End'/);
     assert.equal((makeTab.match(/createElement\('button'\)/g) || []).length, 2);
     assert.doesNotMatch(makeTab, /setAttribute\('role', 'button'\)/);
-    assert.match(styles, /\.tab:focus-visible/);
+    assert.match(styles, /\.tab-select:focus-visible/);
     assert.match(styles, /\.close-tab:focus-visible/);
     assert.match(javascript, /const focusedTabId = document\.activeElement/);
     assert.match(javascript, /activeTab\.focus\(\)/);
