@@ -10,19 +10,19 @@ test('browser tabs use keyboard-operable tab semantics and a real close button',
         fs.readFile(path.join(sourceDirectory, 'app.js'), 'utf8'),
         fs.readFile(path.join(sourceDirectory, 'styles.css'), 'utf8')
     ]);
-    assert.match(html, /id="tabs"[^>]*role="tablist"/);
+    assert.match(html, /id="tabs"[^>]*role="group"/);
     const makeTab = javascript.slice(
         javascript.indexOf('function makeTab('),
         javascript.indexOf('\nfunction render(', javascript.indexOf('function makeTab('))
     );
     assert.match(makeTab, /createElement\('div'\)/);
-    assert.match(makeTab, /setAttribute\('role', 'tab'\)/);
-    assert.match(makeTab, /setAttribute\('tabindex'/);
+    assert.match(makeTab, /setAttribute\('aria-pressed'/);
+    assert.match(makeTab, /className = 'tab-select'/);
     assert.match(makeTab, /ArrowRight/);
     assert.match(makeTab, /ArrowLeft/);
     assert.match(makeTab, /event\.key === 'Home'/);
     assert.match(makeTab, /event\.key === 'End'/);
-    assert.match(makeTab, /createElement\('button'\)/);
+    assert.equal((makeTab.match(/createElement\('button'\)/g) || []).length, 2);
     assert.doesNotMatch(makeTab, /setAttribute\('role', 'button'\)/);
     assert.match(styles, /\.tab:focus-visible/);
     assert.match(styles, /\.close-tab:focus-visible/);
