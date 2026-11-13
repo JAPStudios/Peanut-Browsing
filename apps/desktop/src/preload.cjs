@@ -10,6 +10,7 @@ contextBridge.exposeInMainWorld('peanutBrowser', {
     openSavedUrl: value => ipcRenderer.invoke('peanut:open-saved-url', value),
     removeBookmark: value => ipcRenderer.invoke('peanut:remove-bookmark', value),
     clearHistory: () => ipcRenderer.invoke('peanut:clear-history'),
+    removeHistoryEntry: input => ipcRenderer.invoke('peanut:remove-history-entry', input),
     listImports: () => ipcRenderer.invoke('peanut:list-imports'),
     createContentBlock: input => ipcRenderer.invoke('peanut:create-content-block', input),
     createWebsite: input => ipcRenderer.invoke('peanut:create-website', input),
