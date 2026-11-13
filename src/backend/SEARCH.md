@@ -48,4 +48,4 @@ Search terms separated by spaces must all match. Use `OR` between alternatives. 
 
 ## Verification
 
-The repository contains the first-party index implementation and Wix HTTP-function adapter. The production route is not verified live until the Wix backend is published, the gateway is reachable over HTTPS, both Wix secrets are set, and a real search request returns indexed results.
+The repository contains the first-party index service and Wix HTTP-function adapter. The production route is not verified live until the Wix backend is published, the gateway is reachable over HTTPS, both Wix secrets are set, and a real search request returns indexed results.
