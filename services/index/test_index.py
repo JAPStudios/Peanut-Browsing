@@ -246,6 +246,13 @@ class SearchIndexTests(unittest.TestCase):
         self.assertEqual(len([url for url in store.pages if "seed.example" in url]), 5)
         self.assertEqual(len([url for url in store.pages if "linked.example" in url]), 3)
 
+    def test_index_database_uses_write_ahead_logging_for_concurrent_search_reads(self):
+        with tempfile.TemporaryDirectory() as directory:
+            store = IndexStore(os.path.join(directory, "index.sqlite"))
+            with store.connect() as connection:
+                mode = connection.execute("PRAGMA journal_mode").fetchone()[0]
+            self.assertEqual(mode.lower(), "wal")
+
     def test_seed_registry_enforces_a_finite_seed_limit(self):
         with tempfile.TemporaryDirectory() as directory:
             store = IndexStore(os.path.join(directory, "index.sqlite"))
