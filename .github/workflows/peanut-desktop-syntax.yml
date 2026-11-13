@@ -1,4 +1,4 @@
-name: Peanut Browsing implementation checks
+name: Peanut Browsing checks
 
 on:
   push:
@@ -54,7 +54,7 @@ jobs:
         run: node --check src/backend/http-functions.js
       - name: Check Wix page code syntax
         run: find src/pages -type f -name '*.js' -print0 | xargs -0 -n1 node --check
-      - name: Check Electron browser implementation
+      - name: Check browser main process
         run: node --check apps/desktop/src/main.cjs
       - name: Check website importer
         run: node --check apps/desktop/src/importer.cjs
