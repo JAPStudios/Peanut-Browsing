@@ -69,7 +69,13 @@ function makeTab(tab, activeTabId) {
 
 function render(state) {
     latestState = state;
+    const focusedTabId = document.activeElement?.dataset?.tabId || null;
     tabsElement.replaceChildren(...state.tabs.map(tab => makeTab(tab, state.activeTabId)));
+    if (focusedTabId) {
+        const nextFocus = Array.from(tabsElement.querySelectorAll('[role="tab"]'))
+            .find(tab => tab.dataset.tabId === focusedTabId);
+        if (nextFocus) nextFocus.focus();
+    }
     const active = state.tabs.find(tab => tab.id === state.activeTabId);
     if (active && document.activeElement !== addressElement) {
         addressElement.value = active.url || '';
