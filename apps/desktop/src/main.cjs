@@ -335,7 +335,10 @@ function attachTabEvents(tab) {
         if (input.type !== 'keyDown') return;
         const modifier = input.control || input.meta;
         const key = String(input.key || '').toLowerCase();
-        if (modifier && key === 'l') {
+        if (input.control && key === 'tab') {
+            event.preventDefault();
+            cycleTabs(input.shift ? -1 : 1);
+        } else if (modifier && key === 'l') {
             event.preventDefault();
             if (chromeView && !chromeView.webContents.isDestroyed()) {
                 chromeView.webContents.send('peanut:focus-address');
@@ -419,6 +422,15 @@ function switchTab(id) {
     publishState();
     return true;
 }
+
+function cycleTabs(direction = 1) {
+    const tabIds = Array.from(tabs.keys());
+    if (tabIds.length < 2) return false;
+    const currentIndex = tabIds.indexOf(activeTabId);
+    const nextIndex = (currentIndex + direction + tabIds.length) % tabIds.length;
+    return switchTab(tabIds[nextIndex]);
+}
+
 
 function closeTab(id) {
     const tab = tabs.get(String(id));
