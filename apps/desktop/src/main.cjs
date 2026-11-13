@@ -717,6 +717,12 @@ function registerIpc() {
         publishState();
         return result;
     });
+    ipcMain.handle('peanut:remove-history-entry', async (event, input) => {
+        if (!isTrustedUi(event)) throw new Error('Not authorised.');
+        const result = await profileStore.removeHistoryEntry(input?.url, input?.visitedAt);
+        publishState();
+        return result;
+    });
     ipcMain.handle('peanut:create-content-block', (event, input) => {
         if (!isTrustedUi(event)) throw new Error('Not authorised.');
         const block = createContentBlock(input);
