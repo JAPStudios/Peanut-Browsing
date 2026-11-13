@@ -35,6 +35,8 @@ Creating the Blueprint provisions a paid index service and a 10 GB persistent di
 
 Do not put the API key in source files, Wix frontend code, or the public repository. The Wix search endpoint remains unavailable until both secrets are configured and the gateway passes a live authenticated request.
 
+The index service persists up to 1,000 submitted seed URLs. Each successful seed is recrawled every 24 hours, with failed crawls retried after one hour; each crawl is bounded to 25 pages and follows each linked external host under its own robots policy with a 3-page cap.
+
 ## Index scope
 
 The crawler accepts explicitly submitted public website addresses, checks and obeys `robots.txt`, keeps sitemap discovery on the submitted origin, follows public links to other origins under per-origin robots and crawl-delay rules, rejects private/local targets, and limits each crawl to 25 pages. The submitted seed host may use the full page budget; each linked external host is capped at 3 pages. Pages are stored in SQLite FTS5 and ranked with BM25. It is an independent first-party search index, but it is not yet a continuously discovered, web-scale index.
