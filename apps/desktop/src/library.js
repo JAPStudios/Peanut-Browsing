@@ -108,6 +108,7 @@ function makeSavedRow(title, subtitle, openAction, removeAction = null) {
         removeButton.type = 'button';
         removeButton.className = 'remove-saved';
         removeButton.textContent = 'Remove';
+        removeButton.setAttribute('aria-label', 'Remove ' + title);
         removeButton.addEventListener('click', removeAction);
         row.append(removeButton);
     }
