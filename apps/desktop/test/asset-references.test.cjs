@@ -44,3 +44,21 @@ test('enforces a finite reference limit', () => {
     const css = Array.from({ length: 8 }, (_, index) => '.x' + index + '{background:url("/' + index + '.png")}').join('');
     assert.equal(extractCssAssetReferences(css, 'https://site.example/main.css', 3).length, 3);
 });
+
+test('preserves raw CSS references alongside their resolved asset URLs', () => {
+    const css = '.a{background:url("../images/hero.png")} .b{background:url("/images/hero.png")}';
+    assert.deepEqual(extractCssAssetReferencePairs(css, 'https://site.example/css/main.css'), [
+        { url: 'https://site.example/images/hero.png', reference: '../images/hero.png' },
+        { url: 'https://site.example/images/hero.png', reference: '/images/hero.png' }
+    ]);
+});
+
+test('extracts responsive image candidates and ignores embedded data URLs', () => {
+    assert.deepEqual(extractSrcsetAssetReferences(
+        'data:image/svg+xml,%3Csvg%3E 1x, /small.jpg 2x, https://cdn.example/large.jpg 3x',
+        'https://site.example/gallery/'
+    ), [
+        { url: 'https://site.example/small.jpg', reference: '/small.jpg' },
+        { url: 'https://cdn.example/large.jpg', reference: 'https://cdn.example/large.jpg' }
+    ]);
+});
