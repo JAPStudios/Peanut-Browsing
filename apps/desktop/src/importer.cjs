@@ -4,15 +4,16 @@ const path = require('node:path');
 const { app, BrowserWindow } = require('electron');
 const { normalizeHttpUrl, normalizeAssetUrl, parseSitemapDeclarations, extractSitemapLocations, assertPublicHostname, parseRobotsRules, isAllowedByRobots } = require('./sitemap-utils.cjs');
 const { mergeImportedPage } = require('./page-record.cjs');
-const { extractCssAssetReferences } = require('./asset-references.cjs');
+const { extractCssAssetReferences, extractCssAssetReferencePairs, extractSrcsetAssetReferences } = require('./asset-references.cjs');
 
 const MAX_PAGES = 250;
 const MAX_HTML_CHARS = 350000;
 const MAX_TEXT_CHARS = 120000;
 const MAX_LINKS_PER_PAGE = 2000;
-const MAX_ASSETS_PER_PAGE = 20;
+const MAX_ASSETS_PER_PAGE = 50;
 const MAX_TOTAL_ASSETS = 300;
 const MAX_ASSET_BYTES = 2 * 1024 * 1024;
+const MAX_MEDIA_BYTES = 10 * 1024 * 1024;
 const MAX_TOTAL_ASSET_BYTES = 50 * 1024 * 1024;
 const MAX_SITEMAPS = 10;
 const MAX_SITEMAP_CHARS = 2 * 1024 * 1024;
@@ -40,6 +41,11 @@ async function extractPage(windowRef) {
     return windowRef.webContents.executeJavaScript(`(() => {
         const description = document.querySelector('meta[name="description"], meta[property="og:description"]');
         const canonical = document.querySelector('link[rel~="canonical"]');
+        const resolveReference = value => {
+            const reference = String(value || '').trim();
+            if (!reference) return '';
+            try { return new URL(reference, document.baseURI).href; } catch { return ''; }
+        };
         return {
             url: location.href,
             title: document.title || '',
@@ -52,25 +58,36 @@ async function extractPage(windowRef) {
                 .slice(0, ${MAX_LINKS_PER_PAGE})
                 .map(link => link.href),
             assets: [
-                ...Array.from(document.querySelectorAll('img[src], source[src], video[poster], audio[src], link[href], script[src]'))
-                    .slice(0, 100)
-                    .flatMap(element => ['src', 'href', 'poster']
+                ...Array.from(document.querySelectorAll(
+                    'img[src], img[data-src], source[src], source[data-src], video[src], video[poster], audio[src], track[src], ' +
+                    'link[rel~="stylesheet"][href], link[rel~="icon"][href], link[rel~="manifest"][href], link[rel~="preload"][href], script[src]'
+                ))
+                    .slice(0, 150)
+                    .flatMap(element => ['src', 'data-src', 'href', 'poster']
                         .filter(attribute => element.hasAttribute(attribute))
                         .map(attribute => ({
                             url: attribute === 'href'
                                 ? element.href
-                                : (attribute === 'poster' ? element.poster : (element.currentSrc || element.src)),
+                                : (attribute === 'poster' ? element.poster :
+                                    (attribute === 'data-src' ? resolveReference(element.getAttribute(attribute)) :
+                                        (element.currentSrc || element.src))),
                             reference: element.getAttribute(attribute)
-                        }))),
-                ...Array.from(document.querySelectorAll('img[srcset], source[srcset]'))
-                    .flatMap(element => (element.getAttribute('srcset') || '').split(',')
-                        .map(candidate => candidate.trim().split(' ')[0])
-                        .filter(reference => reference && !reference.startsWith('data:'))
-                        .map(reference => ({
-                            url: new URL(reference, document.baseURI).href,
-                            reference
                         })))
-            ].filter(asset => asset.url)
+            ].filter(asset => asset.url),
+            srcsets: Array.from(document.querySelectorAll('img[srcset], source[srcset], img[data-srcset], source[data-srcset]'))
+                .slice(0, 100)
+                .map(element => ({
+                    value: element.getAttribute('srcset') || element.getAttribute('data-srcset') || ''
+                }))
+                .filter(item => item.value),
+            inlineStyles: [
+                ...Array.from(document.querySelectorAll('style'))
+                    .slice(0, 50)
+                    .map(element => String(element.textContent || '').slice(0, 20000)),
+                ...Array.from(document.querySelectorAll('[style]'))
+                    .slice(0, 100)
+                    .map(element => String(element.getAttribute('style') || '').slice(0, 5000))
+            ].filter(Boolean).slice(0, 100)
         };
     })()`, false);
 }
@@ -91,7 +108,14 @@ function extensionForAsset(url, contentType) {
         'font/woff': '.woff',
         'font/woff2': '.woff2',
         'application/font-woff': '.woff',
-        'application/vnd.ms-fontobject': '.eot'
+        'application/vnd.ms-fontobject': '.eot',
+        'video/mp4': '.mp4',
+        'video/webm': '.webm',
+        'audio/mpeg': '.mp3',
+        'audio/mp4': '.m4a',
+        'audio/ogg': '.ogg',
+        'audio/wav': '.wav',
+        'text/vtt': '.vtt'
     };
     if (known[contentType]) return known[contentType];
     try {
@@ -250,20 +274,23 @@ async function downloadAsset(browserSession, value, origin, directory, assetStat
         try {
             const response = await browserSession.fetch(assetUrl.href, {
                 method: 'GET',
-                credentials: 'include',
+                credentials: 'omit',
                 redirect: 'manual',
                 signal: AbortSignal.timeout(15000)
             });
             if (!response.ok || (response.status >= 300 && response.status < 400)) return null;
             const contentType = (response.headers.get('content-type') || '').split(';')[0].trim().toLowerCase();
+            const isMedia = contentType.startsWith('video/') || contentType.startsWith('audio/');
             const supported = contentType.startsWith('image/') || contentType.startsWith('font/') ||
-                contentType === 'text/css' || contentType === 'text/javascript' ||
-                contentType === 'application/javascript' || contentType === 'application/font-woff' ||
-                contentType === 'application/vnd.ms-fontobject';
+                contentType.startsWith('video/') || contentType.startsWith('audio/') ||
+                contentType === 'text/css' || contentType === 'text/vtt' ||
+                contentType === 'text/javascript' || contentType === 'application/javascript' ||
+                contentType === 'application/font-woff' || contentType === 'application/vnd.ms-fontobject';
             if (!supported) return null;
+            const assetLimit = isMedia ? MAX_MEDIA_BYTES : MAX_ASSET_BYTES;
             const declaredSize = Number(response.headers.get('content-length') || 0);
-            if (declaredSize > MAX_ASSET_BYTES) return null;
-            const bytes = await readLimitedBody(response, MAX_ASSET_BYTES);
+            if (declaredSize > assetLimit) return null;
+            const bytes = await readLimitedBody(response, assetLimit);
             if (!bytes || bytes.length === 0 ||
                 assetState.totalBytes + assetState.reservedBytes + bytes.length > MAX_TOTAL_ASSET_BYTES) return null;
 
@@ -423,19 +450,37 @@ async function crawlSite(startAddress, onProgress = () => {}) {
                     textTruncated: String(extracted.textContent || '').length >= MAX_TEXT_CHARS
                 };
                 const assetReferences = new Map();
+                const addAssetReference = (assetUrl, reference) => {
+                    if (!assetUrl) return;
+                    if (!assetReferences.has(assetUrl)) assetReferences.set(assetUrl, new Set());
+                    if (reference) assetReferences.get(assetUrl).add(reference);
+                };
                 for (const asset of extracted.assets || []) {
                     const assetUrl = typeof asset === 'string' ? asset : asset?.url;
                     const reference = typeof asset === 'string' ? asset : asset?.reference;
-                    if (!assetUrl) continue;
-                    if (!assetReferences.has(assetUrl)) assetReferences.set(assetUrl, new Set());
-                    if (reference) assetReferences.get(assetUrl).add(reference);
+                    addAssetReference(assetUrl, reference);
                 }
+                for (const srcset of extracted.srcsets || []) {
+                    for (const asset of extractSrcsetAssetReferences(srcset.value, finalUrl.href)) {
+                        addAssetReference(asset.url, asset.reference);
+                    }
+                }
+                for (const inlineStyle of extracted.inlineStyles || []) {
+                    for (const asset of extractCssAssetReferencePairs(inlineStyle, finalUrl.href)) {
+                        addAssetReference(asset.url, asset.reference);
+                    }
+                }
+                const assetUrlsBeforePage = new Set(assetState.byUrl.keys());
                 const assetEntries = Array.from(assetReferences.entries()).slice(0, MAX_ASSETS_PER_PAGE);
                 const pageAssets = await Promise.all(assetEntries.map(async ([assetUrl, references]) => {
                     const record = await downloadAsset(browserSession, assetUrl, origin, assetsDirectory, assetState, robotsPolicy.rules);
                     return record ? { ...record, references: Array.from(references) } : null;
                 }));
-                page.assets = pageAssets.filter(Boolean);
+                const pageAssetMap = new Map(pageAssets.filter(Boolean).map(asset => [asset.url, asset]));
+                for (const asset of assetState.byUrl.values()) {
+                    if (!assetUrlsBeforePage.has(asset.url)) pageAssetMap.set(asset.url, asset);
+                }
+                page.assets = Array.from(pageAssetMap.values());
                 const savedPage = await writePage(importDirectory, page);
                 saved.push(savedPage);
 
