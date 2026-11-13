@@ -15,6 +15,7 @@ function makeTab(tab, activeTabId) {
     const selected = tab.id === activeTabId;
     const wrapper = document.createElement('div');
     wrapper.className = 'tab';
+    wrapper.setAttribute('data-selected', String(selected));
 
     const select = document.createElement('button');
     select.className = 'tab-select';
