@@ -2,7 +2,7 @@
   "name": "peanut-browsing-desktop",
   "version": "0.1.0",
   "private": true,
-  "description": "Peanut Browsing desktop browser shell",
+  "description": "Peanut Browsing browser client",
   "main": "src/main.cjs",
   "scripts": {
     "start": "electron .",
