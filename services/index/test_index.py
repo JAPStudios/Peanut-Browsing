@@ -246,6 +246,16 @@ class SearchIndexTests(unittest.TestCase):
         self.assertEqual(len([url for url in store.pages if "seed.example" in url]), 5)
         self.assertEqual(len([url for url in store.pages if "linked.example" in url]), 3)
 
+    def test_seed_registry_enforces_a_finite_seed_limit(self):
+        with tempfile.TemporaryDirectory() as directory:
+            store = IndexStore(os.path.join(directory, "index.sqlite"))
+            with patch.object(index_server, "MAX_CRAWL_SEEDS", 1):
+                store.register_seed("https://one.example/")
+                store.register_seed("https://one.example/")
+                with self.assertRaisesRegex(ValueError, "seed limit"):
+                    store.register_seed("https://two.example/")
+            self.assertEqual(store.seed_count(), 1)
+
     def test_seed_schedule_claims_and_reschedules_successful_crawls(self):
         with tempfile.TemporaryDirectory() as directory:
             store = IndexStore(os.path.join(directory, "index.sqlite"))
