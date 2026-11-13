@@ -18,24 +18,35 @@ body { margin: 0; overflow: hidden; }
 .tab {
   display: flex;
   align-items: center;
-  gap: 9px;
+  gap: 4px;
   min-width: 105px;
   max-width: 220px;
-  padding: 0 10px;
+  padding: 0 5px 0 10px;
   border: 1px solid transparent;
   border-radius: 8px 8px 0 0;
   background: #e7e9ed;
   color: #343943;
+}
+.tab-select {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  flex: 1;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
   font: inherit;
   font-size: 12px;
   text-align: left;
   cursor: pointer;
 }
-.tab[aria-selected="true"] { background: #fff; border-color: #d9dde3; border-bottom-color: #fff; }
-.tab:focus-visible { outline: 2px solid #245b9a; outline-offset: 2px; position: relative; z-index: 1; }
+.tab-select[aria-pressed="true"] { font-weight: 600; }
+.tab-select:focus-visible { outline: 2px solid #245b9a; outline-offset: 2px; position: relative; z-index: 1; }
 .tab-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; text-align: left; }
 .close-tab { display: inline-grid; place-items: center; width: 24px; height: 24px; border: 0; background: transparent; color: #626a75; font: inherit; cursor: pointer; padding: 0; border-radius: 4px; }
 .close-tab:hover { background: #d6d9df; }
+.close-tab:focus-visible { outline: 2px solid #245b9a; outline-offset: 1px; }
 .close-tab:focus-visible { outline: 2px solid #245b9a; outline-offset: 1px; }
 .new-tab, .nav-button, .go-button { border: 1px solid #d2d7df; background: #fff; color: #343943; cursor: pointer; }
 .new-tab { width: 28px; height: 27px; border-radius: 7px; font-size: 19px; line-height: 18px; }
