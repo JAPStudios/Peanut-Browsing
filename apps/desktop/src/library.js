@@ -22,6 +22,7 @@ const exportButton = document.getElementById('export-site');
 const batchStatus = document.getElementById('batch-status');
 const newSiteNameInput = document.getElementById('new-site-name');
 const newSiteTemplateInput = document.getElementById('new-site-template');
+const newSiteThemeInput = document.getElementById('new-site-theme');
 const createSiteButton = document.getElementById('create-site');
 const openSiteButton = document.getElementById('open-site');
 const newPagePathInput = document.getElementById('new-page-path');
@@ -135,7 +136,7 @@ function renderSites() {
     sitesElement.replaceChildren(...sites.map(site => makeItem(
         site.name || site.websiteUrl || 'Imported website',
         site.authored && site.template
-            ? site.template + ' · ' + site.pageCount + ' pages'
+            ? site.template + ' · ' + (site.theme || 'light') + ' · ' + site.pageCount + ' pages'
             : site.pageCount + ' pages · ' + site.errorCount + ' import errors',
         site.id === selectedSiteId,
         () => selectSite(site.id)
@@ -321,12 +322,12 @@ createSiteButton.addEventListener('click', async () => {
     createSiteButton.disabled = true;
     batchStatus.textContent = 'Creating website…';
     try {
-        const result = await api.createWebsite({ name: newSiteNameInput.value, template: newSiteTemplateInput.value });
+        const result = await api.createWebsite({ name: newSiteNameInput.value, template: newSiteTemplateInput.value, theme: newSiteThemeInput.value });
         newSiteNameInput.value = '';
         await loadSites();
         selectSite(result.id);
         await selectPage(result.pageId);
-        batchStatus.textContent = 'Created ' + result.websiteUrl + '. Add pages, edit the source, then export the website.';
+        batchStatus.textContent = 'Created ' + result.websiteUrl + ' with the ' + result.theme + ' theme. Add pages, edit the source, then export the website.';
     } catch (error) {
         batchStatus.textContent = error.message || 'Website creation failed.';
     } finally {
