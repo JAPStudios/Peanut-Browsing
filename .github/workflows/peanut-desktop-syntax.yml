@@ -54,7 +54,7 @@ jobs:
         run: node --check src/backend/http-functions.js
       - name: Check Wix page code syntax
         run: find src/pages -type f -name '*.js' -print0 | xargs -0 -n1 node --check
-      - name: Check Electron main process
+      - name: Check Electron browser implementation
         run: node --check apps/desktop/src/main.cjs
       - name: Check website importer
         run: node --check apps/desktop/src/importer.cjs
@@ -74,7 +74,7 @@ jobs:
         run: node --check apps/desktop/src/page-record.cjs
       - name: Check library interface
         run: node --check apps/desktop/src/library.js
-      - name: Resolve desktop dependencies
+      - name: Resolve Electron dependencies
         working-directory: apps/desktop
         run: npm install --package-lock=false --no-audit --no-fund
       - name: Test imported-site library
@@ -94,7 +94,7 @@ jobs:
       - name: Verify Electron package
         working-directory: apps/desktop
         run: node -p "require('electron/package.json').version"
-      - name: Smoke-test desktop and tracker-filter initialization
+      - name: Smoke-test browser and tracker-filter initialization
         working-directory: apps/desktop
         run: |
           set +e
