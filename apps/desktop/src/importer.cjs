@@ -153,7 +153,7 @@ async function fetchRobotsPolicy(browserSession, origin) {
         throw new Error('The website robots.txt policy could not be checked. Import stopped to respect its crawling rules.');
     }
 
-    if (response.status === 404 || response.status === 410) {
+    if (response.status === 204 || response.status === 404 || response.status === 410) {
         return { text: '', rules: [] };
     }
     if (response.status === 401 || response.status === 403) {
@@ -223,9 +223,10 @@ async function discoverSitemapPages(browserSession, origin, pathPrefix = '/', ro
     return { sitemapCount: checkedSitemaps.size, pages: Array.from(pageUrls) };
 }
 
-async function downloadAsset(browserSession, value, origin, directory, assetState) {
+async function downloadAsset(browserSession, value, origin, directory, assetState, robotsRules = []) {
     const assetUrl = normalizeAssetUrl(value, origin);
     if (!assetUrl) return null;
+    if (assetUrl.origin === origin && !isAllowedByRobots(assetUrl.href, robotsRules)) return null;
     if (!assetState.validatedHosts.has(assetUrl.hostname)) {
         let hostValidation = assetState.pendingHosts.get(assetUrl.hostname);
         if (!hostValidation) {
@@ -289,7 +290,7 @@ async function downloadAsset(browserSession, value, origin, directory, assetStat
             if (contentType === 'text/css') {
                 const nestedReferences = extractCssAssetReferences(bytes.toString('utf8'), assetUrl.href);
                 for (const reference of nestedReferences) {
-                    await downloadAsset(browserSession, reference, origin, directory, assetState);
+                    await downloadAsset(browserSession, reference, origin, directory, assetState, robotsRules);
                 }
             }
             return record;
@@ -400,6 +401,10 @@ async function crawlSite(startAddress, onProgress = () => {}) {
             try {
                 await withTimeout(contents.loadURL(address), PAGE_TIMEOUT_MS, () => contents.stop());
                 const extracted = await extractPage(browser);
+                if (!isAllowedByRobots(extracted.url, robotsPolicy.rules)) {
+                    errors.push({ url: address, reason: 'The final page address is disallowed by the website robots.txt policy.' });
+                    continue;
+                }
                 const finalUrl = normalizeHttpUrl(extracted.url, origin, pathPrefix);
                 if (!finalUrl) {
                     errors.push({ url: address, reason: 'The page redirected outside the starting website.' });
@@ -427,7 +432,7 @@ async function crawlSite(startAddress, onProgress = () => {}) {
                 }
                 const assetEntries = Array.from(assetReferences.entries()).slice(0, MAX_ASSETS_PER_PAGE);
                 const pageAssets = await Promise.all(assetEntries.map(async ([assetUrl, references]) => {
-                    const record = await downloadAsset(browserSession, assetUrl, origin, assetsDirectory, assetState);
+                    const record = await downloadAsset(browserSession, assetUrl, origin, assetsDirectory, assetState, robotsPolicy.rules);
                     return record ? { ...record, references: Array.from(references) } : null;
                 }));
                 page.assets = pageAssets.filter(Boolean);
