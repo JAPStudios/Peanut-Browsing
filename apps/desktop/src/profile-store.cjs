@@ -3,7 +3,7 @@ const path = require('node:path');
 
 const MAX_BOOKMARKS = 1000;
 const MAX_HISTORY = 1000;
-const MAX_VISIBLE_HISTORY = 200;
+const MAX_VISIBLE_HISTORY = MAX_HISTORY;
 
 function normalizeUrl(value) {
     if (typeof value !== 'string' || value.length > 4096) return null;
@@ -122,6 +122,18 @@ function createProfileStore(filePath) {
         return getState();
     }
 
+    async function removeHistoryEntry(value, visitedAt) {
+        await load();
+        const url = normalizeUrl(value);
+        if (!url || typeof visitedAt !== 'string' || !Number.isFinite(Date.parse(visitedAt))) {
+            return getState();
+        }
+        const previousLength = data.history.length;
+        data.history = data.history.filter(item => !(item.url === url && item.visitedAt === visitedAt));
+        if (data.history.length !== previousLength) await persist();
+        return getState();
+    }
+
     async function clearHistory() {
         await load();
         data.history = [];
@@ -143,6 +155,7 @@ function createProfileStore(filePath) {
         toggleBookmark,
         removeBookmark,
         clearHistory,
+        removeHistoryEntry,
         isBookmarked
     };
 }
