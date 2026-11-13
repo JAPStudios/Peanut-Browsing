@@ -12,35 +12,70 @@ const bookmarkButton = document.getElementById('bookmark-page');
 let latestState = null;
 
 function makeTab(tab, activeTabId) {
-    const button = document.createElement('button');
-    button.className = 'tab';
-    button.type = 'button';
-    button.setAttribute('role', 'tab');
-    button.setAttribute('aria-selected', String(tab.id === activeTabId));
-    button.addEventListener('click', () => api.switchTab(tab.id));
+    const selected = tab.id === activeTabId;
+    const wrapper = document.createElement('div');
+    wrapper.className = 'tab';
+    wrapper.setAttribute('data-selected', String(selected));
+
+    const select = document.createElement('button');
+    select.className = 'tab-select';
+    select.type = 'button';
+    select.setAttribute('aria-pressed', String(selected));
+    select.setAttribute('aria-label', (tab.private ? 'Private tab: ' : 'Tab: ') + (tab.title || 'New Tab'));
+    select.dataset.tabId = tab.id;
+    select.addEventListener('click', () => api.switchTab(tab.id));
+    select.addEventListener('keydown', event => {
+        const currentTabs = Array.from(tabsElement.querySelectorAll('.tab-select'));
+        const currentIndex = currentTabs.indexOf(select);
+        if (currentIndex < 0 || currentTabs.length === 0) return;
+
+        let targetIndex = null;
+        if (event.key === 'ArrowRight') targetIndex = (currentIndex + 1) % currentTabs.length;
+        else if (event.key === 'ArrowLeft') targetIndex = (currentIndex - 1 + currentTabs.length) % currentTabs.length;
+        else if (event.key === 'Home') targetIndex = 0;
+        else if (event.key === 'End') targetIndex = currentTabs.length - 1;
+
+        if (targetIndex !== null) {
+            event.preventDefault();
+            const target = currentTabs[targetIndex];
+            target.focus();
+            api.switchTab(target.dataset.tabId);
+        }
+    });
 
     const title = document.createElement('span');
     title.className = 'tab-title';
     title.textContent = (tab.private ? 'Private · ' : '') +
         (tab.loading ? 'Loading…' : (tab.title || 'New Tab'));
 
-    const close = document.createElement('span');
+    const close = document.createElement('button');
     close.className = 'close-tab';
-    close.setAttribute('role', 'button');
-    close.setAttribute('aria-label', 'Close tab');
+    close.type = 'button';
+    close.setAttribute('aria-label', 'Close ' + (tab.title || 'New Tab'));
     close.textContent = '×';
     close.addEventListener('click', event => {
+        event.preventDefault();
         event.stopPropagation();
+        close.dataset.focusTabId = tab.id;
         api.closeTab(tab.id);
     });
 
-    button.append(title, close);
-    return button;
+    select.append(title);
+    wrapper.append(select, close);
+    return wrapper;
 }
 
 function render(state) {
     latestState = state;
+    const focusedTabId = document.activeElement?.dataset?.focusTabId || document.activeElement?.dataset?.tabId || null;
     tabsElement.replaceChildren(...state.tabs.map(tab => makeTab(tab, state.activeTabId)));
+    if (focusedTabId) {
+        const nextFocus = Array.from(tabsElement.querySelectorAll('.tab-select'))
+            .find(tab => tab.dataset.tabId === focusedTabId);
+        const activeTab = nextFocus || Array.from(tabsElement.querySelectorAll('.tab-select'))
+            .find(tab => tab.dataset.tabId === state.activeTabId);
+        if (activeTab) activeTab.focus();
+    }
     const active = state.tabs.find(tab => tab.id === state.activeTabId);
     if (active && document.activeElement !== addressElement) {
         addressElement.value = active.url || '';
