@@ -1,31 +1,26 @@
 # Peanut Browsing
 
-This repository contains Peanut Browsing's Wix/Velo website code, first-party search index, website-importing and correction tools, independent website-creation tools, and browser application code.
+This repository contains Peanut Browsing's Wix/Velo website code, first-party search index, website-importing and correction tools, independent website-creation tools, and browser implementation code.
 
 ## Components
 
 - `src/`: Wix/Velo website code connected to the existing Peanut Browsing site.
-- `apps/desktop/`: the current Electron-based browser application implementation. Its current code also contains the website importer, imported-page correction library, independent website-creation tools, local previews, and static website export. This directory describes where that implementation currently lives; it does not define Peanut Browsing as a desktop-only product or establish desktop-only project requirements.
+- `apps/desktop/`: the current Electron browser implementation and its existing importing, correction, website-creation, preview, and export code. This is a repository location for existing code, not a statement of the required product form or a definition of Peanut Browsing's scope.
 - `services/index/`: Peanut Browsing's own bounded web crawler and SQLite FTS5/BM25 search index.
-- `services/search/`: authenticated Nginx gateway for the first-party index.
-- `.github/workflows/peanut-desktop-syntax.yml`: source checks, tests, container build, and production gateway configuration validation.
+- `services/search/`: authenticated gateway for the first-party index.
 
-The website search adapter currently calls the configured Peanut Browsing index service. The desktop results page supports bounded previous/next pagination and renders backend errors explicitly. The crawler starts from explicitly submitted public websites, follows eligible public links across origins, applies each origin's `robots.txt` rules and enforces a bounded page limit. It is not yet a continuously discovered web-scale index of the public internet.
+The first-party crawler starts from explicitly submitted public websites, follows eligible public links across origins, applies each origin's `robots.txt` rules, and enforces bounded crawl limits. The index is not yet a continuously discovered, web-scale index of the public internet.
 
-## Wix site development
+## Existing Wix site
 
-This repository is connected to the existing Peanut Browsing Wix site through Git Integration. The site tracks the repository's default branch. Committing backend code does not by itself prove that Wix has published the corresponding HTTP function; the published endpoint must be tested.
+The repository is connected to the existing Peanut Browsing Wix site through Git Integration. The site is published and Velo is enabled. Committing backend code does not by itself prove that Wix has published the corresponding HTTP function; the published endpoint must be tested.
 
-The Wix CLI supports local development and publishing from a terminal. See [Wix CLI documentation](https://dev.wix.com/docs/wix-cli/command-reference/introduction).
+## Website importing and creation
 
-## Desktop development
-
-The desktop application has its own package. Its development requirements are Node.js 20 or newer, npm, and Electron's supported build environment. Run the desktop tests from `apps/desktop/` with `npm test`.
-
-## Independent website creation
-
-The desktop library can create a local website from blank, landing-page, portfolio, blog or documentation layouts. It can add pages, edit page markup and text, preview authored pages inside Peanut Browsing, and export the result as a static website. Authored pages use the internal `peanut-site://` address scheme and are stored in the desktop application's local data directory. Export creates ordinary HTML files and captured assets in a folder selected by the user. Creating or exporting a site does not publish it to a public domain or provide public hosting.
+The existing implementation includes website-importing, imported-page correction, independent website-creation, preview, and static-export code. These capabilities are not complete merely because their code exists. Importing and correction still require end-to-end verification, safe handling of imported markup and assets, reliable preservation of page structure and behavior, and a usable interface on the intended product surface. Static export does not itself publish a site to a public domain or provide public hosting.
 
 ## First-party search service
 
-The production search stack runs the Peanut Browsing index service behind an authenticated Nginx gateway. It does not include an external metasearch engine. The gateway is bound to loopback and must sit behind HTTPS reverse proxy infrastructure before public use. See `src/backend/SEARCH.md` for the Wix integration contract and deployment requirements.
+The search adapter in the Wix backend calls Peanut Browsing's own index service through an authenticated gateway. The crawler stores extracted titles, URLs, and text in SQLite FTS5 and ranks results with BM25. It indexes submitted seed websites rather than continuously discovering the entire public web.
+
+The production gateway requires a reachable public HTTPS deployment, a persistent index database, and the two Wix Secrets Manager values documented in `src/backend/SEARCH.md`. The Wix HTTP function and real indexed search results must be verified on the published site before first-party search can be considered operational.
