@@ -290,3 +290,36 @@ test('creates independent websites from supported starter layouts', async t => {
         /supported website template/
     );
 });
+
+test('applies the selected design theme to every page in an authored website', async t => {
+    const root = await fs.mkdtemp(path.join(os.tmpdir(), 'peanut-theme-test-'));
+    t.after(() => fs.rm(root, { recursive: true, force: true }));
+
+    const created = await createWebsite(root, {
+        name: 'Night Website',
+        template: 'landing',
+        theme: 'midnight'
+    });
+    assert.equal(created.theme, 'midnight');
+    const home = await readImportedPage(root, created.id, created.pageId);
+    assert.equal(home.theme, 'midnight');
+    assert.match(home.html, /color-scheme:dark/);
+    assert.match(home.html, /--page-bg:#151923/);
+
+    const about = await createWebsitePage(root, { siteId: created.id, path: 'about' });
+    const aboutPage = await readImportedPage(root, created.id, about.pageId);
+    assert.equal(aboutPage.theme, 'midnight');
+    assert.match(aboutPage.html, /--page-bg:#151923/);
+
+    const listed = await listImportedSites(root);
+    assert.equal(listed[0].theme, 'midnight');
+});
+
+test('rejects unsupported website design themes', async t => {
+    const root = await fs.mkdtemp(path.join(os.tmpdir(), 'peanut-invalid-theme-'));
+    t.after(() => fs.rm(root, { recursive: true, force: true }));
+    await assert.rejects(
+        createWebsite(root, { name: 'Invalid Theme', theme: 'unapproved' }),
+        /supported website design theme/
+    );
+});
