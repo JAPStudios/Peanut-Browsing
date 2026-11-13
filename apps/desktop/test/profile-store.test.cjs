@@ -72,3 +72,22 @@ test('searches and removes an individual history visit without deleting bookmark
     const unchanged = await store.removeHistoryEntry(first.url, 'not-a-date');
     assert.equal(unchanged.history.length, 1);
 });
+
+test('persists and removes selected unpacked extension directories', async t => {
+    const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'peanut-extension-paths-'));
+    t.after(() => fs.rm(directory, { recursive: true, force: true }));
+    const filePath = path.join(directory, 'profile.json');
+    const extensionPath = path.join(directory, 'extension');
+    const first = createProfileStore(filePath);
+    await first.load();
+    await first.addExtensionPath(extensionPath);
+    await first.addExtensionPath(extensionPath);
+    assert.deepEqual(first.getState().extensions, [extensionPath]);
+
+    const second = createProfileStore(filePath);
+    await second.load();
+    assert.deepEqual(second.getState().extensions, [extensionPath]);
+    await second.removeExtensionPath(extensionPath);
+    assert.deepEqual(second.getState().extensions, []);
+    await assert.rejects(second.addExtensionPath('relative/extension'), /directory path is invalid/);
+});
