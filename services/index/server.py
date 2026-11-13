@@ -278,6 +278,45 @@ def build_fts_query(query: str) -> str:
     return " OR ".join(expressions)
 
 
+def parse_site_operator(query: str) -> tuple[str, str | None]:
+    """Remove one site: filter and return its normalized host."""
+    if not isinstance(query, str) or len(query) > 200:
+        raise ValueError("Search phrases must contain between 1 and 200 characters.")
+    matches = list(re.finditer(r"(?<!\\S)site:([^\\s]+)", query, flags=re.IGNORECASE))
+    if len(matches) > 1:
+        raise ValueError("Use one site: filter per search.")
+    if not matches:
+        if re.search(r"(?<!\\S)site:(?=\\s|$)", query, flags=re.IGNORECASE):
+            raise ValueError("Enter a website host after site:.")
+        return query, None
+
+    match = matches[0]
+    candidate = match.group(1).strip()
+    if "://" not in candidate:
+        candidate = "https://" + candidate
+    parsed = urlsplit(candidate)
+    try:
+        if parsed.port is not None:
+            raise ValueError("Site filters must use a hostname without a port or path.")
+    except ValueError as error:
+        if "port" in str(error).lower():
+            raise ValueError("Site filters must use a hostname without a port or path.") from error
+        raise
+    if parsed.path not in ("", "/") or parsed.query or parsed.fragment:
+        raise ValueError("Site filters must use a hostname without a port or path.")
+    normalized = validate_public_url(candidate)
+    hostname = (urlsplit(normalized).hostname or "").rstrip(".")
+    try:
+        hostname = hostname.encode("idna").decode("ascii").lower()
+    except UnicodeError as error:
+        raise ValueError("Enter a valid website host after site:.") from error
+    if not hostname:
+        raise ValueError("Enter a valid website host after site:.")
+
+    remaining = (query[:match.start()] + query[match.end():]).strip()
+    return remaining, hostname
+
+
 class IndexStore:
     def __init__(self, path: str):
         self.path = path
@@ -289,6 +328,33 @@ class IndexStore:
                 "CREATE VIRTUAL TABLE IF NOT EXISTS page_index "
                 "USING fts5(title, url UNINDEXED, body, tokenize='unicode61')"
             )
+            connection.execute(
+                "CREATE TABLE IF NOT EXISTS page_hosts ("
+                "url TEXT PRIMARY KEY, host TEXT NOT NULL, reverse_host TEXT NOT NULL)"
+            )
+            connection.execute("CREATE INDEX IF NOT EXISTS page_hosts_reverse_idx ON page_hosts(reverse_host)")
+            connection.execute(
+                "CREATE TABLE IF NOT EXISTS index_metadata (key TEXT PRIMARY KEY, value TEXT NOT NULL)"
+            )
+            migrated = connection.execute(
+                "SELECT value FROM index_metadata WHERE key = 'page-host-index-v1'"
+            ).fetchone()
+            if migrated is None:
+                for row in connection.execute("SELECT url FROM page_index").fetchall():
+                    hostname = (urlsplit(row["url"]).hostname or "").rstrip(".")
+                    if not hostname:
+                        continue
+                    try:
+                        hostname = hostname.encode("idna").decode("ascii").lower()
+                    except UnicodeError:
+                        continue
+                    connection.execute(
+                        "INSERT OR REPLACE INTO page_hosts(url, host, reverse_host) VALUES (?, ?, ?)",
+                        (row["url"], hostname, hostname[::-1]),
+                    )
+                connection.execute(
+                    "INSERT OR REPLACE INTO index_metadata(key, value) VALUES ('page-host-index-v1', '1')"
+                )
             connection.execute(
                 "CREATE TABLE IF NOT EXISTS crawl_seeds ("
                 "url TEXT PRIMARY KEY, last_crawled_at REAL, next_crawl_at REAL NOT NULL, "
@@ -309,12 +375,24 @@ class IndexStore:
             connection.close()
 
     def upsert(self, url: str, title: str, body: str):
+        hostname = (urlsplit(url).hostname or "").rstrip(".")
+        try:
+            hostname = hostname.encode("idna").decode("ascii").lower()
+        except UnicodeError:
+            hostname = ""
         with self.connect() as connection:
             connection.execute("DELETE FROM page_index WHERE url = ?", (url,))
             connection.execute(
                 "INSERT INTO page_index(title, url, body) VALUES (?, ?, ?)",
                 (title[:500], url, body[:MAX_TEXT_CHARS]),
             )
+            if hostname:
+                connection.execute(
+                    "INSERT OR REPLACE INTO page_hosts(url, host, reverse_host) VALUES (?, ?, ?)",
+                    (url, hostname, hostname[::-1]),
+                )
+            else:
+                connection.execute("DELETE FROM page_hosts WHERE url = ?", (url,))
 
     def register_seed(self, url: str, now: float | None = None):
         timestamp = time.time() if now is None else float(now)
@@ -374,17 +452,44 @@ class IndexStore:
     def search(self, query: str, limit: int = DEFAULT_SEARCH_LIMIT, offset: int = 0):
         if not isinstance(query, str) or len(query) > 200:
             raise ValueError("Search phrases must contain between 1 and 200 characters.")
-        safe_query = build_fts_query(query)
+        text_query, site_host = parse_site_operator(query)
+        safe_query = build_fts_query(text_query) if text_query else None
+        join = " JOIN page_hosts ON page_hosts.url = page_index.url" if site_host else ""
+        where = []
+        parameters = []
+        if safe_query:
+            where.append("page_index MATCH ?")
+            parameters.append(safe_query)
+        if site_host:
+            reversed_host = site_host[::-1]
+            where.append("(page_hosts.reverse_host = ? OR page_hosts.reverse_host LIKE ?)")
+            parameters.extend([reversed_host, reversed_host + ".%"])
+        if not where:
+            raise ValueError("Enter at least one search term or a site: filter.")
+        where_sql = " AND ".join(where)
+
         with self.connect() as connection:
             total = connection.execute(
-                "SELECT COUNT(*) FROM page_index WHERE page_index MATCH ?", (safe_query,)
+                "SELECT COUNT(*) FROM page_index" + join + " WHERE " + where_sql,
+                tuple(parameters),
             ).fetchone()[0]
-            rows = connection.execute(
-                "SELECT title, url, snippet(page_index, 2, '', '', ' … ', 22) AS snippet, "
-                "bm25(page_index, 8.0, 0.0, 1.0) AS rank FROM page_index "
-                "WHERE page_index MATCH ? ORDER BY rank LIMIT ? OFFSET ?",
-                (safe_query, limit, offset),
-            ).fetchall()
+            if safe_query:
+                rows = connection.execute(
+                    "SELECT page_index.title, page_index.url, "
+                    "snippet(page_index, 2, '', '', ' … ', 22) AS snippet, "
+                    "bm25(page_index, 8.0, 0.0, 1.0) AS rank "
+                    "FROM page_index" + join + " WHERE " + where_sql +
+                    " ORDER BY rank LIMIT ? OFFSET ?",
+                    tuple(parameters + [limit, offset]),
+                ).fetchall()
+            else:
+                rows = connection.execute(
+                    "SELECT page_index.title, page_index.url, "
+                    "substr(page_index.body, 1, 180) AS snippet, 0.0 AS rank "
+                    "FROM page_index" + join + " WHERE " + where_sql +
+                    " ORDER BY page_index.title COLLATE NOCASE, page_index.url LIMIT ? OFFSET ?",
+                    tuple(parameters + [limit, offset]),
+                ).fetchall()
         results = []
         for row in rows:
             rank = float(row["rank"])
