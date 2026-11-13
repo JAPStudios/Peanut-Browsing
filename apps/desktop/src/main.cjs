@@ -737,8 +737,8 @@ async function addBrowserExtension() {
         title: 'Review extension permissions',
         message: 'Load "' + details.name + '"?',
         detail: 'Version ' + details.version + ' · Manifest V' + details.manifestVersion +
-            '\\nRequested permissions: ' + permissionSummary +
-            '\\n\\nElectron supports only a subset of Chromium extension APIs. Some extensions may not work. Only load extensions from sources that are trusted.',
+            '\nRequested permissions: ' + permissionSummary +
+            '\n\nElectron supports only a subset of Chromium extension APIs. Some extensions may not work. Only load extensions from sources that are trusted.',
         buttons: ['Load extension', 'Cancel'],
         defaultId: 1,
         cancelId: 1
