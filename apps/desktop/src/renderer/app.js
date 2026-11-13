@@ -60,6 +60,10 @@ function makeTab(tab, activeTabId) {
     close.addEventListener('click', event => {
         event.preventDefault();
         event.stopPropagation();
+        const currentTabs = Array.from(tabsElement.querySelectorAll('[role="tab"]'));
+        const currentIndex = currentTabs.indexOf(button);
+        close.dataset.focusTabId = currentTabs[currentIndex + 1]?.dataset.tabId ||
+            currentTabs[currentIndex - 1]?.dataset.tabId || tab.id;
         api.closeTab(tab.id);
     });
 
@@ -69,12 +73,14 @@ function makeTab(tab, activeTabId) {
 
 function render(state) {
     latestState = state;
-    const focusedTabId = document.activeElement?.dataset?.tabId || null;
+    const focusedTabId = document.activeElement?.dataset?.focusTabId || document.activeElement?.dataset?.tabId || null;
     tabsElement.replaceChildren(...state.tabs.map(tab => makeTab(tab, state.activeTabId)));
     if (focusedTabId) {
         const nextFocus = Array.from(tabsElement.querySelectorAll('[role="tab"]'))
             .find(tab => tab.dataset.tabId === focusedTabId);
-        if (nextFocus) nextFocus.focus();
+        const activeTab = nextFocus || Array.from(tabsElement.querySelectorAll('[role="tab"]'))
+            .find(tab => tab.dataset.tabId === state.activeTabId);
+        if (activeTab) activeTab.focus();
     }
     const active = state.tabs.find(tab => tab.id === state.activeTabId);
     if (active && document.activeElement !== addressElement) {
