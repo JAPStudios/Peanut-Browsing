@@ -82,6 +82,7 @@ textarea { resize: vertical; line-height: 1.5; }
 #page-preview { width: 100%; min-width: 0; min-height: 360px; border: 1px solid #cbd1da; border-radius: 7px; background: #fff; }
 .text-editor { min-height: 180px; }
 .editor-note { margin: 4px 0 0; color: #7b8490; font-size: 10px; }
+#history-search { margin: 8px 0 10px; font-size: 11px; }
 #status { padding: 9px 18px; border-top: 1px solid #dce0e6; background: #fff; color: #687381; font-size: 11px; }
 @media (max-width: 900px) {
   .workspace { grid-template-columns: 170px 210px minmax(340px, 1fr); }
