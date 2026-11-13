@@ -57,3 +57,18 @@ test('clears browsing history without removing bookmarks', async t => {
     assert.equal(store.getState().history.length, 0);
     assert.equal(store.getState().bookmarks.length, 1);
 });
+test('searches and removes an individual history visit without deleting bookmarks', async t => {
+    const store = await createStore(t);
+    await store.recordVisit('https://example.test/one', 'First page');
+    await store.recordVisit('https://example.test/two', 'Second page');
+    const first = store.getState().history.find(item => item.url === 'https://example.test/one');
+    assert.ok(first?.visitedAt);
+
+    await store.toggleBookmark('https://example.test/one', 'First page');
+    const afterRemoval = await store.removeHistoryEntry(first.url, first.visitedAt);
+    assert.equal(afterRemoval.history.some(item => item.url === first.url), false);
+    assert.equal(afterRemoval.history.length, 1);
+    assert.equal(afterRemoval.bookmarks.length, 1);
+    const unchanged = await store.removeHistoryEntry(first.url, 'not-a-date');
+    assert.equal(unchanged.history.length, 1);
+});
