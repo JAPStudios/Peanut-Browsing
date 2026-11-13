@@ -21,7 +21,7 @@ function normalizeUrl(value) {
 
 function createProfileStore(filePath) {
     let loaded = false;
-    let data = { version: 1, bookmarks: [], history: [] };
+    let data = { version: 1, bookmarks: [], history: [], extensions: [] };
     let writeQueue = Promise.resolve();
 
     async function load() {
@@ -36,11 +36,14 @@ function createProfileStore(filePath) {
                 ).slice(0, MAX_BOOKMARKS) : [],
                 history: Array.isArray(parsed.history) ? parsed.history.filter(item =>
                     item && normalizeUrl(item.url) && typeof item.title === 'string'
-                ).slice(0, MAX_HISTORY) : []
+                ).slice(0, MAX_HISTORY) : [],
+                extensions: Array.isArray(parsed.extensions) ? parsed.extensions.filter(value =>
+                    typeof value === 'string' && path.isAbsolute(value) && value.length <= 4096
+                ).slice(0, 100) : []
             };
         } catch (error) {
             if (error.code !== 'ENOENT') {
-                data = { version: 1, bookmarks: [], history: [] };
+                data = { version: 1, bookmarks: [], history: [], extensions: [] };
             }
         }
         loaded = true;
@@ -50,7 +53,8 @@ function createProfileStore(filePath) {
     function getState() {
         return {
             bookmarks: data.bookmarks.map(item => ({ ...item })),
-            history: data.history.slice(0, MAX_VISIBLE_HISTORY).map(item => ({ ...item }))
+            history: data.history.slice(0, MAX_VISIBLE_HISTORY).map(item => ({ ...item })),
+            extensions: data.extensions.slice()
         };
     }
 
@@ -141,6 +145,29 @@ function createProfileStore(filePath) {
         return getState();
     }
 
+    async function addExtensionPath(value) {
+        await load();
+        if (typeof value !== 'string' || !path.isAbsolute(value) || value.length > 4096) {
+            throw new Error('The extension directory path is invalid.');
+        }
+        const extensionPath = path.resolve(value);
+        if (!data.extensions.includes(extensionPath)) {
+            if (data.extensions.length >= 100) throw new Error('The extension limit has been reached.');
+            data.extensions.push(extensionPath);
+            await persist();
+        }
+        return getState();
+    }
+
+    async function removeExtensionPath(value) {
+        await load();
+        if (typeof value !== 'string' || !path.isAbsolute(value)) return getState();
+        const extensionPath = path.resolve(value);
+        data.extensions = data.extensions.filter(item => item !== extensionPath);
+        await persist();
+        return getState();
+    }
+
     async function isBookmarked(value) {
         await load();
         const url = normalizeUrl(value);
@@ -156,6 +183,8 @@ function createProfileStore(filePath) {
         removeBookmark,
         clearHistory,
         removeHistoryEntry,
+        addExtensionPath,
+        removeExtensionPath,
         isBookmarked
     };
 }
