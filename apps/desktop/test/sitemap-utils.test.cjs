@@ -7,6 +7,8 @@ const {
     decodeXml,
     extractSitemapLocations,
     parseSitemapDeclarations,
+    parseRobotsRules,
+    isAllowedByRobots,
     isPublicAddress,
     assertPublicHostname
 } = require('../src/sitemap-utils.cjs');
@@ -122,4 +124,40 @@ test('enforces a site path boundary on shared hosting domains', () => {
 test('rejects local DNS names before importing', async () => {
     await assert.rejects(assertPublicHostname('127.0.0.1'), /public DNS hostname/i);
     await assert.rejects(assertPublicHostname('localhost'), /private, local or reserved/i);
+});
+test('parses wildcard robots groups and ignores unrelated user-agent groups', () => {
+    const rules = parseRobotsRules([
+        'User-agent: ExampleBot',
+        'Disallow: /everything',
+        'User-agent: *',
+        'Disallow: /private/',
+        'Allow: /private/public/',
+        'Disallow: /*.pdf$'
+    ].join('\\n'));
+    assert.deepEqual(rules, [
+        { allow: false, path: '/private/' },
+        { allow: true, path: '/private/public/' },
+        { allow: false, path: '/*.pdf$' }
+    ]);
+});
+
+test('applies the most specific robots rule and gives Allow precedence on equal specificity', () => {
+    const rules = parseRobotsRules([
+        'User-agent: *',
+        'Disallow: /private/',
+        'Allow: /private/public/',
+        'Disallow: /files/*.pdf$',
+        'Allow: /files/report.pdf$'
+    ].join('\\n'));
+    assert.equal(isAllowedByRobots('https://example.test/private/page', rules), false);
+    assert.equal(isAllowedByRobots('https://example.test/private/public/page', rules), true);
+    assert.equal(isAllowedByRobots('https://example.test/files/report.pdf', rules), true);
+    assert.equal(isAllowedByRobots('https://example.test/files/other.pdf', rules), false);
+    assert.equal(isAllowedByRobots('https://example.test/files/other.html', rules), true);
+});
+
+test('allows all paths when robots.txt has no applicable wildcard rules', () => {
+    const rules = parseRobotsRules('User-agent: ExampleBot\\nDisallow: /');
+    assert.equal(isAllowedByRobots('https://example.test/page', rules), true);
+    assert.equal(isAllowedByRobots('not a URL', rules), false);
 });
