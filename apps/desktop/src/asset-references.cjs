@@ -22,9 +22,14 @@ function extractCssAssetReferencePairs(css, baseUrl, limit = MAX_CSS_REFERENCES)
     while ((match = referencePattern.exec(source)) && references.size < limit) {
         const reference = String(match[1] ?? match[3] ?? match[4] ?? '').trim();
         const url = normalizeReference(reference, baseUrl);
-        if (url && !references.has(url)) references.set(url, reference);
+        if (url) {
+            if (!references.has(url)) references.set(url, new Set());
+            references.get(url).add(reference);
+        }
     }
-    return Array.from(references, ([url, reference]) => ({ url, reference }));
+    return Array.from(references, ([url, values]) =>
+        Array.from(values, reference => ({ url, reference }))
+    ).flat();
 }
 
 function extractCssAssetReferences(css, baseUrl, limit = MAX_CSS_REFERENCES) {
