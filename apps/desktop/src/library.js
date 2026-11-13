@@ -269,10 +269,28 @@ editor.addEventListener('submit', async event => {
 
 htmlInput.addEventListener('input', updatePreview);
 
+const blockTextLabel = document.getElementById('block-text-label');
+
 function updateBlockControls() {
-    const needsUrl = blockTypeInput.value === 'link';
+    const type = blockTypeInput.value;
+    const needsUrl = ['link', 'button', 'image'].includes(type);
+    const needsText = type !== 'divider';
     blockUrlInput.hidden = !needsUrl;
     blockUrlLabel.hidden = !needsUrl;
+    blockUrlInput.required = needsUrl;
+    blockUrlLabel.textContent = type === 'image'
+        ? 'Image address'
+        : (type === 'button' ? 'Button destination' : 'Link address');
+    blockUrlInput.placeholder = type === 'image'
+        ? 'https://example.com/image.png'
+        : 'https://example.com';
+    blockTextInput.hidden = !needsText;
+    blockTextLabel.hidden = !needsText;
+    blockTextInput.required = needsText && type !== 'image';
+    blockTextLabel.textContent = type === 'image'
+        ? 'Alternative text (optional)'
+        : (type === 'button' ? 'Button label' :
+            (type === 'callout' ? 'Callout text' : 'Text or one list item per line'));
 }
 
 blockTypeInput.addEventListener('change', updateBlockControls);
