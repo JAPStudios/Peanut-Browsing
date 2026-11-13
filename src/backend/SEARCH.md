@@ -27,6 +27,11 @@ The crawler does not yet discover the entire public web automatically. Pages app
 
 The owner-only Wix web module `src/backend/indexedWebsites.jsw` exposes `indexWebsite(url, maxPages)` for submitting a website to the crawler after the gateway and Wix secrets are configured.
 
+
+## Current connection state
+
+A read-only check of the existing Peanut Browsing Wix site's Secrets Manager returned an empty list. Neither `PEANUT_SEARCH_API_URL` nor `PEANUT_SEARCH_API_KEY` is currently configured there. The published search route therefore cannot connect to the first-party gateway until both values are configured. No secret values were retrieved or changed.
+
 ## Production deployment
 
 The production Docker Compose stack includes the first-party index service and authenticated Nginx gateway. Its public gateway port is bound to loopback and must sit behind an HTTPS reverse proxy. The gateway API key is required for search and crawl requests. Keep the index database volume persistent.
