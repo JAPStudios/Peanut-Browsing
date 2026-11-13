@@ -25,6 +25,7 @@ const { crawlSite } = require('./importer.cjs');
 const { listImportedSites, readImportedPage, saveImportedPage, exportImportedSite, createWebsite, createWebsitePage } = require('./import-library.cjs');
 const { createContentBlock, insertContentBlock } = require('./page-builder.cjs');
 const { createProfileStore, normalizeUrl } = require('./profile-store.cjs');
+const { validateExtensionManifest } = require('./extension-manager.cjs');
 
 const TOOLBAR_HEIGHT = 104;
 const NEW_TAB_FILE = path.join(__dirname, 'newtab.html');
@@ -39,6 +40,7 @@ let adblocker = null;
 let protectionStatus = 'initializing';
 let profileStore = null;
 let importInProgress = false;
+const extensionPathsById = new Map();
 let downloadStatus = 'Downloads ready';
 const assetAccessToken = crypto.randomUUID();
 let activeTabId = null;
@@ -672,6 +674,102 @@ function createLibraryWindow() {
     });
 }
 
+function getBrowserExtensionSession() {
+    return session.fromPartition('persist:peanut-browser').extensions;
+}
+
+function listBrowserExtensions() {
+    return getBrowserExtensionSession().getAllExtensions().map(extension => ({
+        id: extension.id,
+        name: extension.name,
+        version: extension.version,
+        path: extensionPathsById.get(extension.id) || extension.path || ''
+    }));
+}
+
+async function loadStoredExtensions() {
+    const extensionSession = getBrowserExtensionSession();
+    for (const extensionPath of profileStore.getState().extensions) {
+        try {
+            const stat = await fs.stat(extensionPath);
+            if (!stat.isDirectory()) throw new Error('Stored extension path is not a directory.');
+            const manifestPath = path.join(extensionPath, 'manifest.json');
+            const manifestStat = await fs.stat(manifestPath);
+            if (manifestStat.size > 1024 * 1024) throw new Error('Extension manifest exceeds the supported size limit.');
+            const manifest = JSON.parse(await fs.readFile(manifestPath, 'utf8'));
+            validateExtensionManifest(manifest);
+            const extension = await extensionSession.loadExtension(extensionPath, { allowFileAccess: false });
+            extensionPathsById.set(extension.id, extensionPath);
+        } catch (error) {
+            console.error('Could not restore browser extension from ' + extensionPath + ':', error);
+        }
+    }
+}
+
+async function addBrowserExtension() {
+    const selection = await dialog.showOpenDialog({
+        title: 'Select an unpacked Chromium extension folder',
+        properties: ['openDirectory']
+    });
+    if (selection.canceled || !selection.filePaths[0]) {
+        return { status: 'cancelled', extensions: listBrowserExtensions() };
+    }
+
+    const extensionPath = path.resolve(selection.filePaths[0]);
+    const stat = await fs.stat(extensionPath);
+    if (!stat.isDirectory()) throw new Error('Select a folder containing an unpacked extension.');
+    const manifestPath = path.join(extensionPath, 'manifest.json');
+    const manifestStat = await fs.stat(manifestPath);
+    if (manifestStat.size > 1024 * 1024) throw new Error('Extension manifest exceeds the supported size limit.');
+    const manifest = JSON.parse(await fs.readFile(manifestPath, 'utf8'));
+    const details = validateExtensionManifest(manifest);
+
+    const existing = listBrowserExtensions().find(extension => extension.path === extensionPath);
+    if (existing) return { status: 'already-loaded', extensions: listBrowserExtensions() };
+
+    const requestedPermissions = [...details.permissions, ...details.hostPermissions];
+    const permissionSummary = requestedPermissions.length
+        ? requestedPermissions.slice(0, 24).join(', ') +
+            (requestedPermissions.length > 24 ? ', …' : '')
+        : 'No explicit permissions declared';
+    const confirmation = await dialog.showMessageBox({
+        type: 'warning',
+        title: 'Review extension permissions',
+        message: 'Load "' + details.name + '"?',
+        detail: 'Version ' + details.version + ' · Manifest V' + details.manifestVersion +
+            '\nRequested permissions: ' + permissionSummary +
+            '\n\nElectron supports only a subset of Chromium extension APIs. Some extensions may not work. Only load extensions from sources that are trusted.',
+        buttons: ['Load extension', 'Cancel'],
+        defaultId: 1,
+        cancelId: 1
+    });
+    if (confirmation.response !== 0) {
+        return { status: 'cancelled', extensions: listBrowserExtensions() };
+    }
+
+    const extension = await getBrowserExtensionSession().loadExtension(extensionPath, { allowFileAccess: false });
+    try {
+        await profileStore.addExtensionPath(extensionPath);
+    } catch (error) {
+        getBrowserExtensionSession().removeExtension(extension.id);
+        throw error;
+    }
+    extensionPathsById.set(extension.id, extensionPath);
+    return { status: 'loaded', extensions: listBrowserExtensions() };
+}
+
+async function removeBrowserExtension(extensionId) {
+    if (typeof extensionId !== 'string' || !extensionId) throw new Error('Select an extension to remove.');
+    const extensionSession = getBrowserExtensionSession();
+    const extension = extensionSession.getExtension(extensionId);
+    if (!extension) return { status: 'not-found', extensions: listBrowserExtensions() };
+    const extensionPath = extensionPathsById.get(extensionId) || extension.path || '';
+    extensionSession.removeExtension(extensionId);
+    extensionPathsById.delete(extensionId);
+    if (extensionPath) await profileStore.removeExtensionPath(extensionPath);
+    return { status: 'removed', extensions: listBrowserExtensions() };
+}
+
 function registerIpc() {
     const isChrome = event => chromeView && event.sender === chromeView.webContents;
     const isTrustedUi = event => isChrome(event) ||
@@ -697,6 +795,18 @@ function registerIpc() {
     ipcMain.handle('peanut:list-profile', event => {
         if (!isTrustedUi(event)) throw new Error('Not authorised.');
         return profileStore.getState();
+    });
+    ipcMain.handle('peanut:list-extensions', event => {
+        if (!isTrustedUi(event)) throw new Error('Not authorised.');
+        return listBrowserExtensions();
+    });
+    ipcMain.handle('peanut:add-extension', async event => {
+        if (!isTrustedUi(event)) throw new Error('Not authorised.');
+        return addBrowserExtension();
+    });
+    ipcMain.handle('peanut:remove-extension', async (event, extensionId) => {
+        if (!isTrustedUi(event)) throw new Error('Not authorised.');
+        return removeBrowserExtension(extensionId);
     });
     ipcMain.handle('peanut:open-saved-url', (event, value) => {
         if (!isTrustedUi(event)) throw new Error('Not authorised.');
@@ -891,6 +1001,7 @@ function createWindow() {
 app.whenReady().then(async () => {
     profileStore = createProfileStore(path.join(app.getPath('userData'), 'profile.json'));
     await profileStore.load();
+    await loadStoredExtensions();
     Menu.setApplicationMenu(null);
     registerAssetProtocol();
     registerAuthoredSiteProtocol();

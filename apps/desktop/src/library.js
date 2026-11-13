@@ -3,6 +3,8 @@ const sitesElement = document.getElementById('sites');
 const pagesElement = document.getElementById('pages');
 const bookmarksElement = document.getElementById('bookmarks');
 const historyElement = document.getElementById('history');
+const extensionsElement = document.getElementById('extensions');
+const loadExtensionButton = document.getElementById('load-extension');
 const historySearchInput = document.getElementById('history-search');
 const statusElement = document.getElementById('status');
 const emptyState = document.getElementById('empty-state');
@@ -35,7 +37,8 @@ const blockUrlLabel = document.getElementById('block-url-label');
 const insertBlockButton = document.getElementById('insert-block');
 
 let sites = [];
-let profile = { bookmarks: [], history: [] };
+let profile = { bookmarks: [], history: [], extensions: [] };
+let extensions = [];
 let selectedSiteId = null;
 let selectedPageId = null;
 let activePageUrl = '';
@@ -116,6 +119,41 @@ function makeSavedRow(title, subtitle, openAction, removeAction = null) {
     return row;
 }
 
+function renderExtensions() {
+    extensionsElement.replaceChildren(...extensions.map(extension => {
+        const row = document.createElement('div');
+        row.className = 'saved-row extension-row';
+        const details = document.createElement('div');
+        details.className = 'extension-details';
+        const name = document.createElement('span');
+        name.className = 'item-title';
+        name.textContent = extension.name || 'Unnamed extension';
+        const version = document.createElement('span');
+        version.className = 'item-subtitle';
+        version.textContent = 'Version ' + (extension.version || 'unknown');
+        details.append(name, version);
+        const removeButton = document.createElement('button');
+        removeButton.type = 'button';
+        removeButton.className = 'remove-saved';
+        removeButton.textContent = 'Remove';
+        removeButton.setAttribute('aria-label', 'Remove extension ' + (extension.name || extension.id));
+        removeButton.addEventListener('click', async () => {
+            removeButton.disabled = true;
+            try {
+                const result = await api.removeExtension(extension.id);
+                extensions = result.extensions || [];
+                renderExtensions();
+                statusElement.textContent = 'Extension removed.';
+            } catch (error) {
+                statusElement.textContent = error.message || 'The extension could not be removed.';
+                removeButton.disabled = false;
+            }
+        });
+        row.append(details, removeButton);
+        return row;
+    }));
+}
+
 function renderProfile() {
     bookmarksElement.replaceChildren(...profile.bookmarks.map(item => makeSavedRow(
         item.title || 'Saved page',
@@ -172,7 +210,9 @@ async function loadSites() {
     try {
         sites = await api.listImports();
         profile = await api.listProfile();
+        extensions = await api.listExtensions();
         renderProfile();
+        renderExtensions();
         if (!sites.some(site => site.id === selectedSiteId)) {
             selectedSiteId = sites[0]?.id || null;
             selectedPageId = null;
@@ -422,6 +462,24 @@ api.onImportProgress(progress => {
         : sitePrefix + 'captured ' + progress.completed + ' page(s).';
 });
 historySearchInput.addEventListener('input', renderProfile);
+
+loadExtensionButton.addEventListener('click', async () => {
+    loadExtensionButton.disabled = true;
+    try {
+        const result = await api.addExtension();
+        extensions = result.extensions || [];
+        renderExtensions();
+        if (result.status === 'loaded') {
+            statusElement.textContent = 'Extension loaded. It will be restored when Peanut Browsing starts.';
+        } else if (result.status === 'already-loaded') {
+            statusElement.textContent = 'That extension is already loaded.';
+        }
+    } catch (error) {
+        statusElement.textContent = error.message || 'The extension could not be loaded.';
+    } finally {
+        loadExtensionButton.disabled = false;
+    }
+});
 
 document.getElementById('clear-history').addEventListener('click', async () => {
     profile = await api.clearHistory();
