@@ -127,7 +127,7 @@ function parseRobotsRules(robotsText) {
     const groups = [];
     let current = null;
 
-    for (const rawLine of String(robotsText || '').split(/\\r?\\n/)) {
+    for (const rawLine of String(robotsText || '').split(/\r?\n/)) {
         const line = rawLine.split('#', 1)[0].trim();
         const separator = line.indexOf(':');
         if (!line || separator < 0) continue;
@@ -165,9 +165,26 @@ function isAllowedByRobots(value, rules) {
 
     for (const rule of Array.isArray(rules) ? rules : []) {
         if (!rule || typeof rule.path !== 'string' || !rule.path) continue;
-        const terminal = rule.path.endsWith(');
+        const terminal = rule.path.endsWith('$');
         const pattern = terminal ? rule.path.slice(0, -1) : rule.path;
-        const escaped = pattern.replace(/[.+?^{}()|[\\]\\\\]/g, '\\\\module.exports = { normalizeHttpUrl, normalizeAssetUrl, parseSitemapDeclarations, decodeXml, extractSitemapLocations, isPublicAddress, assertPublicHostname };').replace(/\\*/g, '.*');
+        const escaped = pattern.replace(/[|\\{}()[\]^$+?.]/g, '\\$&').replace(/\*/g, '.*');
+        let expression;
+        try {
+            expression = new RegExp('^' + escaped + (terminal ? '$' : ''));
+        } catch {
+            continue;
+        }
+        if (!expression.test(target)) continue;
+        const specificity = pattern.replace(/\*/g, '').length;
+        if (!best || specificity > best.specificity ||
+            (specificity === best.specificity && rule.allow)) {
+            best = { specificity, allow: Boolean(rule.allow) };
+        }
+    }
+    return !best || best.allow;
+}
+
+module.exports = { normalizeHttpUrl, normalizeAssetUrl, parseSitemapDeclarations, parseRobotsRules, isAllowedByRobots, decodeXml, extractSitemapLocations, isPublicAddress, assertPublicHostname };').replace(/\\*/g, '.*');
         let expression;
         try {
             expression = new RegExp('^' + escaped + (terminal ? ' : ''));
