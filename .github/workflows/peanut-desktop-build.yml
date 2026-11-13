@@ -1,4 +1,4 @@
-name: Peanut Browsing desktop packages
+name: Peanut Browsing browser packages
 
 on:
   workflow_dispatch:
@@ -34,10 +34,10 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - name: Install desktop dependencies
+      - name: Install Electron dependencies
         working-directory: apps/desktop
         run: npm install --package-lock=false --no-audit --no-fund
-      - name: Build desktop installer
+      - name: Build browser package
         working-directory: apps/desktop
         run: npm run ${{ matrix.script }}
       - name: Upload installer artifacts
