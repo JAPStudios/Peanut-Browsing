@@ -1,4 +1,4 @@
-name: Peanut Browsing desktop syntax
+name: Peanut Browsing implementation checks
 
 on:
   push:
@@ -19,7 +19,7 @@ on:
       - ".github/workflows/peanut-desktop-syntax.yml"
 
 concurrency:
-  group: peanut-desktop-validation-${{ github.ref }}
+  group: peanut-browsing-validation-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
