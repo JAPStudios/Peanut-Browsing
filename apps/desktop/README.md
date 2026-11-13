@@ -16,6 +16,8 @@ The default search destination is Peanut Browsing's published Wix HTTP search en
 
 ## Existing browser functions
 
+The browser tab strip uses separate selection and close buttons. Keyboard navigation supports Tab/Shift+Tab, Left/Right, Home/End, Control+Tab, and Control+Shift+Tab.
+
 The current code includes multi-tab navigation, an address/search bar, back and forward navigation, reload and stop controls, persistent browser session storage, private tabs, HTTP/HTTPS navigation, ad and tracker filtering, bookmarks, searchable browsing history with individual entry removal and bulk clearing, downloads, and a local results page. Private tabs use a separate in-memory session; their cookies, cache, authentication data, and site storage are cleared when the tab closes. Private mode does not conceal the network address or prevent browser fingerprinting. Tracking protection is not antivirus software and does not guarantee detection of every tracker or advertisement.
 
 ## Website importing and local website work
