@@ -32,4 +32,4 @@ The importer does not capture arbitrary cross-origin resources, fully migrate dy
 
 ## Current gaps recorded in the source documentation
 
-The repository's existing notes identify advanced history management, password management, synchronization, extension compatibility, cosmetic ad removal, complete asset migration, a full visual website builder, website publishing, accessibility verification, automatic updates, signed installers, platform testing, and Android work as areas not yet completed. These notes describe recorded work status, not requirements inferred from the directory name or current code choices.
+The repository's existing notes identify advanced history management, password management, synchronization, extension compatibility, cosmetic ad removal, complete asset migration, a full visual website builder, website publishing, accessibility verification, automatic updates, signed installers, and platform testing as areas not yet completed. These notes describe recorded work status, not requirements inferred from the directory name or current code choices.
