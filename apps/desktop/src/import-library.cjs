@@ -469,7 +469,7 @@ function makeAuthoredPage(url, title, template = 'blank', theme = 'light') {
     };
 }
 
-function createWebsite(importRoot, input) {
+async function createWebsite(importRoot, input) {
     const name = typeof input?.name === 'string' ? input.name.trim() : '';
     const template = typeof input?.template === 'string' ? input.template : 'blank';
     const theme = typeof input?.theme === 'string' ? input.theme : 'light';
