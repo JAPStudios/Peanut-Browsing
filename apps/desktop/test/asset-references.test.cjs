@@ -1,6 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { extractCssAssetReferences } = require('../src/asset-references.cjs');
+const { extractCssAssetReferences, extractCssAssetReferencePairs, extractSrcsetAssetReferences } = require('../src/asset-references.cjs');
 
 test('extracts relative, root-relative and protocol-relative CSS assets', () => {
     const css = [
