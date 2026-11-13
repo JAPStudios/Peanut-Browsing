@@ -54,7 +54,9 @@
           <h2>Recent history</h2>
           <button id="clear-history" class="small-button" type="button">Clear</button>
         </div>
-        <div id="history" class="item-list" aria-label="Recent history"></div>
+        <label class="visually-hidden" for="history-search">Search browsing history</label>
+        <input id="history-search" type="search" placeholder="Search history by title or address" autocomplete="off">
+        <div id="history" class="item-list" aria-label="Browsing history"></div>
       </section>
     </section>
     <section class="column pages-column">
