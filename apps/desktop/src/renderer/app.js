@@ -60,10 +60,7 @@ function makeTab(tab, activeTabId) {
     close.addEventListener('click', event => {
         event.preventDefault();
         event.stopPropagation();
-        const currentTabs = Array.from(tabsElement.querySelectorAll('[role="tab"]'));
-        const currentIndex = currentTabs.indexOf(button);
-        close.dataset.focusTabId = currentTabs[currentIndex + 1]?.dataset.tabId ||
-            currentTabs[currentIndex - 1]?.dataset.tabId || tab.id;
+        close.dataset.focusTabId = tab.id;
         api.closeTab(tab.id);
     });
 
