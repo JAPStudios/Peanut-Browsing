@@ -13,25 +13,20 @@ let latestState = null;
 
 function makeTab(tab, activeTabId) {
     const selected = tab.id === activeTabId;
-    const button = document.createElement('div');
-    button.className = 'tab';
-    button.setAttribute('role', 'tab');
-    button.setAttribute('aria-selected', String(selected));
-    button.setAttribute('aria-label', (tab.private ? 'Private tab: ' : 'Tab: ') + (tab.title || 'New Tab'));
-    button.setAttribute('tabindex', selected ? '0' : '-1');
-    button.dataset.tabId = tab.id;
-    button.addEventListener('click', () => api.switchTab(tab.id));
-    button.addEventListener('keydown', event => {
-        if (event.target !== button) return;
-        const currentTabs = Array.from(tabsElement.querySelectorAll('[role="tab"]'));
-        const currentIndex = currentTabs.indexOf(button);
-        if (currentIndex < 0 || currentTabs.length === 0) return;
+    const wrapper = document.createElement('div');
+    wrapper.className = 'tab';
 
-        if (event.key === 'Enter' || event.key === ' ') {
-            event.preventDefault();
-            api.switchTab(tab.id);
-            return;
-        }
+    const select = document.createElement('button');
+    select.className = 'tab-select';
+    select.type = 'button';
+    select.setAttribute('aria-pressed', String(selected));
+    select.setAttribute('aria-label', (tab.private ? 'Private tab: ' : 'Tab: ') + (tab.title || 'New Tab'));
+    select.dataset.tabId = tab.id;
+    select.addEventListener('click', () => api.switchTab(tab.id));
+    select.addEventListener('keydown', event => {
+        const currentTabs = Array.from(tabsElement.querySelectorAll('.tab-select'));
+        const currentIndex = currentTabs.indexOf(select);
+        if (currentIndex < 0 || currentTabs.length === 0) return;
 
         let targetIndex = null;
         if (event.key === 'ArrowRight') targetIndex = (currentIndex + 1) % currentTabs.length;
@@ -64,8 +59,9 @@ function makeTab(tab, activeTabId) {
         api.closeTab(tab.id);
     });
 
-    button.append(title, close);
-    return button;
+    select.append(title);
+    wrapper.append(select, close);
+    return wrapper;
 }
 
 function render(state) {
@@ -73,9 +69,9 @@ function render(state) {
     const focusedTabId = document.activeElement?.dataset?.focusTabId || document.activeElement?.dataset?.tabId || null;
     tabsElement.replaceChildren(...state.tabs.map(tab => makeTab(tab, state.activeTabId)));
     if (focusedTabId) {
-        const nextFocus = Array.from(tabsElement.querySelectorAll('[role="tab"]'))
+        const nextFocus = Array.from(tabsElement.querySelectorAll('.tab-select'))
             .find(tab => tab.dataset.tabId === focusedTabId);
-        const activeTab = nextFocus || Array.from(tabsElement.querySelectorAll('[role="tab"]'))
+        const activeTab = nextFocus || Array.from(tabsElement.querySelectorAll('.tab-select'))
             .find(tab => tab.dataset.tabId === state.activeTabId);
         if (activeTab) activeTab.focus();
     }
