@@ -157,7 +157,7 @@ async function fetchRobotsPolicy(browserSession, origin) {
         return { text: '', rules: [] };
     }
     if (response.status === 401 || response.status === 403) {
-        return { text: 'User-agent: *\\nDisallow: /', rules: parseRobotsRules('User-agent: *\\nDisallow: /') };
+        return { text: 'User-agent: *\nDisallow: /', rules: parseRobotsRules('User-agent: *\nDisallow: /') };
     }
     if (response.status >= 300 && response.status < 400) {
         throw new Error('The website robots.txt request redirected. Import stopped because its crawling policy could not be verified.');
