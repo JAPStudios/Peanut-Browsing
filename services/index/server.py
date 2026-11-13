@@ -282,11 +282,11 @@ def parse_site_operator(query: str) -> tuple[str, str | None]:
     """Remove one site: filter and return its normalized host."""
     if not isinstance(query, str) or len(query) > 200:
         raise ValueError("Search phrases must contain between 1 and 200 characters.")
-    matches = list(re.finditer(r"(?<!\\S)site:([^\\s]+)", query, flags=re.IGNORECASE))
+    matches = list(re.finditer(r"(?<!\S)site:([^\s]+)", query, flags=re.IGNORECASE))
     if len(matches) > 1:
         raise ValueError("Use one site: filter per search.")
     if not matches:
-        if re.search(r"(?<!\\S)site:(?=\\s|$)", query, flags=re.IGNORECASE):
+        if re.search(r"(?<!\S)site:(?=\s|$)", query, flags=re.IGNORECASE):
             raise ValueError("Enter a website host after site:.")
         return query, None
 
