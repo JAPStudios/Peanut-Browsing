@@ -33,7 +33,7 @@ function extractCssAssetReferencePairs(css, baseUrl, limit = MAX_CSS_REFERENCES)
 }
 
 function extractCssAssetReferences(css, baseUrl, limit = MAX_CSS_REFERENCES) {
-    return extractCssAssetReferencePairs(css, baseUrl, limit).map(asset => asset.url);
+    return Array.from(new Set(extractCssAssetReferencePairs(css, baseUrl, limit).map(asset => asset.url)));
 }
 
 function parseSrcsetUrls(value, limit = MAX_SRCSET_REFERENCES) {
