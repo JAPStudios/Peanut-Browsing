@@ -71,6 +71,7 @@ async function listImportedSites(importRoot) {
                 name: manifest.name || '',
                 authored: Boolean(manifest.authored),
                 template: manifest.template || null,
+                theme: manifest.theme || 'light',
                 startUrl: manifest.startUrl || '',
                 importedAt: manifest.importedAt || '',
                 pageCount: manifest.pageCount || 0,
@@ -389,24 +390,68 @@ const WEBSITE_TEMPLATES = {
     documentation: '<main><h1>{{title}}</h1><p>Guides and reference material.</p><nav aria-label="Documentation sections"><a href="#getting-started">Getting started</a> · <a href="#guides">Guides</a> · <a href="#reference">Reference</a></nav><section id="getting-started"><h2>Getting started</h2><p>Explain the first steps.</p></section><section id="guides"><h2>Guides</h2><p>Add practical instructions.</p></section><section id="reference"><h2>Reference</h2><p>Add detailed reference material.</p></section></main>'
 };
 
-function makeAuthoredPage(url, title, template = 'blank') {
+const WEBSITE_THEMES = {
+    light: {
+        colorScheme: 'light', background: '#ffffff', surface: '#f1f4f8',
+        text: '#20242b', muted: '#687381', accent: '#245b9a',
+        border: '#d9dee6', buttonText: '#ffffff', font: 'system-ui,sans-serif'
+    },
+    midnight: {
+        colorScheme: 'dark', background: '#151923', surface: '#222a38',
+        text: '#edf1f7', muted: '#b2bdcd', accent: '#8db7f2',
+        border: '#3b4658', buttonText: '#111827', font: 'system-ui,sans-serif'
+    },
+    warm: {
+        colorScheme: 'light', background: '#fbf5eb', surface: '#f2e6d5',
+        text: '#3a2b22', muted: '#806b5a', accent: '#9a5638',
+        border: '#dfcdb9', buttonText: '#ffffff', font: 'Georgia,serif'
+    },
+    forest: {
+        colorScheme: 'light', background: '#f1f5ef', surface: '#e2ebdf',
+        text: '#26362b', muted: '#647565', accent: '#356b49',
+        border: '#cbd8c8', buttonText: '#ffffff', font: 'system-ui,sans-serif'
+    }
+};
+
+function buildWebsiteThemeCss(theme) {
+    const palette = WEBSITE_THEMES[theme];
+    if (!palette) throw new Error('Choose a supported website design theme.');
+    return ':root{color-scheme:' + palette.colorScheme + ';--page-bg:' + palette.background +
+        ';--page-surface:' + palette.surface + ';--page-text:' + palette.text +
+        ';--page-muted:' + palette.muted + ';--page-accent:' + palette.accent +
+        ';--page-border:' + palette.border + ';--page-button-text:' + palette.buttonText + '}' +
+        'body{margin:0;font:16px/1.65 ' + palette.font + ';color:var(--page-text);background:var(--page-bg)}' +
+        'main,section{width:min(760px,calc(100% - 40px));margin:48px auto}' +
+        'h1{font-size:clamp(2rem,6vw,3.5rem);line-height:1.1}h2{margin-top:2rem}' +
+        '.hero{padding:12vh 0}.eyebrow{letter-spacing:.12em;font-size:.8rem;color:var(--page-muted)}' +
+        'p{line-height:1.75}a{color:var(--page-accent)}li{margin:.5rem 0}' +
+        '.peanut-image{margin:28px 0}.peanut-image img{display:block;max-width:100%;height:auto;border-radius:12px}' +
+        '.peanut-callout{margin:24px 0;padding:18px 20px;border-left:4px solid var(--page-accent);border-radius:8px;background:var(--page-surface)}' +
+        '.peanut-callout p{margin:0}.peanut-divider{margin:32px 0;border:0;border-top:1px solid var(--page-border)}' +
+        '.peanut-button-row{margin:22px 0}.peanut-button{display:inline-block;padding:11px 18px;border-radius:8px;background:var(--page-accent);color:var(--page-button-text);text-decoration:none;font-weight:600}' +
+        '.peanut-button:hover{opacity:.88}blockquote{border-left:3px solid var(--page-border);margin:24px 0;padding-left:18px;color:var(--page-muted)}';
+}
+
+function makeAuthoredPage(url, title, template = 'blank', theme = 'light') {
     const safeTitle = escapeHtmlText(title);
     const markup = WEBSITE_TEMPLATES[template];
     if (!markup) throw new Error('Choose a supported website template.');
+    const themeCss = buildWebsiteThemeCss(theme);
     const content = markup.replace(/\{\{title\}\}/g, safeTitle);
     const html = '<!doctype html>\n<html lang="en">\n<head>\n' +
         '  <meta charset="utf-8">\n' +
         '  <meta name="viewport" content="width=device-width, initial-scale=1">\n' +
         '  <title>' + safeTitle + '</title>\n' +
-        '  <style>body{margin:0;font:16px/1.65 system-ui,sans-serif;color:#20242b;background:#fff}main,section{width:min(760px,calc(100% - 40px));margin:48px auto}h1{font-size:clamp(2rem,6vw,3.5rem);line-height:1.1}h2{margin-top:2rem}.hero{padding:12vh 0}.eyebrow{letter-spacing:.12em;font-size:.8rem}a{color:#1459a6}li{margin:.5rem 0}.peanut-image{margin:28px 0}.peanut-image img{display:block;max-width:100%;height:auto;border-radius:12px}.peanut-callout{margin:24px 0;padding:18px 20px;border-left:4px solid #657b9a;border-radius:8px;background:#f1f4f8}.peanut-callout p{margin:0}.peanut-divider{margin:32px 0;border:0;border-top:1px solid #d9dee6}.peanut-button-row{margin:22px 0}.peanut-button{display:inline-block;padding:11px 18px;border-radius:8px;background:#20242b;color:#fff;text-decoration:none;font-weight:600}.peanut-button:hover{opacity:.88}</style>\\n' +
+        '  <style>' + themeCss + '</style>\n' +
         '</head>\n<body>\n' + content + '\n</body>\n</html>\n';
-    const sourceHash = fingerprint([title, '', html, title].join('\n'));
+    const sourceHash = fingerprint([title, theme, html, title].join('\n'));
     return {
         url,
         title,
         description: '',
         canonicalUrl: url,
         language: 'en',
+        theme,
         html,
         textContent: title,
         htmlTruncated: false,
@@ -424,17 +469,21 @@ function makeAuthoredPage(url, title, template = 'blank') {
     };
 }
 
-async function createWebsite(importRoot, input) {
+function createWebsite(importRoot, input) {
     const name = typeof input?.name === 'string' ? input.name.trim() : '';
     const template = typeof input?.template === 'string' ? input.template : 'blank';
+    const theme = typeof input?.theme === 'string' ? input.theme : 'light';
     if (!name || name.length > 80) throw new Error('Enter a website name of 1 to 80 characters.');
     if (!Object.prototype.hasOwnProperty.call(WEBSITE_TEMPLATES, template)) {
         throw new Error('Choose a supported website template.');
     }
+    if (!Object.prototype.hasOwnProperty.call(WEBSITE_THEMES, theme)) {
+        throw new Error('Choose a supported website design theme.');
+    }
     const siteId = fingerprint(crypto.randomUUID() + name).slice(0, 20);
     const websiteUrl = 'peanut-site://' + siteId + '/';
     const pageId = fingerprint(websiteUrl);
-    const page = makeAuthoredPage(websiteUrl, name, template);
+    const page = makeAuthoredPage(websiteUrl, name, template, theme);
     const siteDirectory = path.join(importRoot, siteId);
     await fs.mkdir(siteDirectory, { recursive: false });
     await atomicWrite(path.join(siteDirectory, pageId + '.json'), page);
@@ -443,6 +492,7 @@ async function createWebsite(importRoot, input) {
         startUrl: websiteUrl,
         name,
         template,
+        theme,
         createdAt: new Date().toISOString(),
         importedAt: new Date().toISOString(),
         pageCount: 1,
@@ -456,7 +506,7 @@ async function createWebsite(importRoot, input) {
         authored: true
     };
     await atomicWrite(path.join(siteDirectory, 'manifest.json'), manifest);
-    return { id: siteId, websiteUrl, pageCount: 1, pageId, template };
+    return { id: siteId, websiteUrl, pageCount: 1, pageId, template, theme };
 }
 
 async function createWebsitePage(importRoot, input) {
@@ -483,7 +533,7 @@ async function createWebsitePage(importRoot, input) {
         const title = segments[segments.length - 1].replace(/-/g, ' ')
             .replace(/\b[a-z]/g, character => character.toUpperCase());
         const pageId = fingerprint(url);
-        const page = makeAuthoredPage(url, title);
+        const page = makeAuthoredPage(url, title, 'blank', manifest.theme || 'light');
         await atomicWrite(path.join(siteDirectory, pageId + '.json'), page);
         manifest.pages.push({ id: pageId, filename: pageId + '.json', url, title });
         manifest.pageCount = manifest.pages.length;
