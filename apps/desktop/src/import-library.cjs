@@ -398,7 +398,7 @@ function makeAuthoredPage(url, title, template = 'blank') {
         '  <meta charset="utf-8">\n' +
         '  <meta name="viewport" content="width=device-width, initial-scale=1">\n' +
         '  <title>' + safeTitle + '</title>\n' +
-        '  <style>body{margin:0;font:16px/1.65 system-ui,sans-serif;color:#20242b;background:#fff}main,section{width:min(760px,calc(100% - 40px));margin:48px auto}h1{font-size:clamp(2rem,6vw,3.5rem);line-height:1.1}h2{margin-top:2rem}.hero{padding:12vh 0}.eyebrow{letter-spacing:.12em;font-size:.8rem}a{color:#1459a6}li{margin:.5rem 0}</style>\\n' +
+        '  <style>body{margin:0;font:16px/1.65 system-ui,sans-serif;color:#20242b;background:#fff}main,section{width:min(760px,calc(100% - 40px));margin:48px auto}h1{font-size:clamp(2rem,6vw,3.5rem);line-height:1.1}h2{margin-top:2rem}.hero{padding:12vh 0}.eyebrow{letter-spacing:.12em;font-size:.8rem}a{color:#1459a6}li{margin:.5rem 0}.peanut-image{margin:28px 0}.peanut-image img{display:block;max-width:100%;height:auto;border-radius:12px}.peanut-callout{margin:24px 0;padding:18px 20px;border-left:4px solid #657b9a;border-radius:8px;background:#f1f4f8}.peanut-callout p{margin:0}.peanut-divider{margin:32px 0;border:0;border-top:1px solid #d9dee6}.peanut-button-row{margin:22px 0}.peanut-button{display:inline-block;padding:11px 18px;border-radius:8px;background:#20242b;color:#fff;text-decoration:none;font-weight:600}.peanut-button:hover{opacity:.88}</style>\\n' +
         '</head>\n<body>\n' + content + '\n</body>\n</html>\n';
     const sourceHash = fingerprint([title, '', html, title].join('\n'));
     return {
