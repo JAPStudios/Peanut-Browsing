@@ -2,7 +2,7 @@ const crypto = require('node:crypto');
 const fs = require('node:fs/promises');
 const path = require('node:path');
 const { app, BrowserWindow } = require('electron');
-const { normalizeHttpUrl, normalizeAssetUrl, parseSitemapDeclarations, extractSitemapLocations, assertPublicHostname } = require('./sitemap-utils.cjs');
+const { normalizeHttpUrl, normalizeAssetUrl, parseSitemapDeclarations, extractSitemapLocations, assertPublicHostname, parseRobotsRules, isAllowedByRobots } = require('./sitemap-utils.cjs');
 const { mergeImportedPage } = require('./page-record.cjs');
 const { extractCssAssetReferences } = require('./asset-references.cjs');
 
@@ -125,7 +125,7 @@ async function fetchLimitedText(browserSession, value, limit) {
     try {
         const response = await browserSession.fetch(value, {
             method: 'GET',
-            credentials: 'include',
+            credentials: 'omit',
             redirect: 'manual',
             signal: AbortSignal.timeout(15000)
         });
@@ -139,18 +139,53 @@ async function fetchLimitedText(browserSession, value, limit) {
     }
 }
 
-async function discoverSitemapPages(browserSession, origin, pathPrefix = '/') {
+async function fetchRobotsPolicy(browserSession, origin) {
+    const robotsUrl = new URL('/robots.txt', origin).href;
+    let response;
+    try {
+        response = await browserSession.fetch(robotsUrl, {
+            method: 'GET',
+            credentials: 'omit',
+            redirect: 'manual',
+            signal: AbortSignal.timeout(15000)
+        });
+    } catch {
+        throw new Error('The website robots.txt policy could not be checked. Import stopped to respect its crawling rules.');
+    }
+
+    if (response.status === 404 || response.status === 410) {
+        return { text: '', rules: [] };
+    }
+    if (response.status === 401 || response.status === 403) {
+        return { text: 'User-agent: *\\nDisallow: /', rules: parseRobotsRules('User-agent: *\\nDisallow: /') };
+    }
+    if (response.status >= 300 && response.status < 400) {
+        throw new Error('The website robots.txt request redirected. Import stopped because its crawling policy could not be verified.');
+    }
+    if (!response.ok || response.status >= 500) {
+        throw new Error('The website robots.txt policy could not be checked. Import stopped to respect its crawling rules.');
+    }
+
+    const declaredSize = Number(response.headers.get('content-length') || 0);
+    if (declaredSize > MAX_ROBOTS_CHARS) {
+        throw new Error('The website robots.txt file exceeds the supported size limit.');
+    }
+    const bytes = await readLimitedBody(response, MAX_ROBOTS_CHARS);
+    if (!bytes) {
+        throw new Error('The website robots.txt file could not be read. Import stopped to respect its crawling rules.');
+    }
+    const text = bytes.toString('utf8');
+    return { text, rules: parseRobotsRules(text) };
+}
+
+async function discoverSitemapPages(browserSession, origin, pathPrefix = '/', robotsText = '') {
     const sitemapQueue = [];
     const queuedSitemaps = new Set();
-    const robotsUrl = new URL('/robots.txt', origin).href;
-    const robots = await fetchLimitedText(browserSession, robotsUrl, MAX_ROBOTS_CHARS);
-    if (robots) {
-        for (const address of parseSitemapDeclarations(robots, MAX_SITEMAPS)) {
-            const sitemap = normalizeHttpUrl(address, origin);
-            if (sitemap && !queuedSitemaps.has(sitemap.href)) {
-                queuedSitemaps.add(sitemap.href);
-                sitemapQueue.push(sitemap.href);
-            }
+    for (const address of parseSitemapDeclarations(robotsText, MAX_SITEMAPS)) {
+        const sitemap = normalizeHttpUrl(address, origin);
+        if (sitemap && !queuedSitemaps.has(sitemap.href)) {
+            queuedSitemaps.add(sitemap.href);
+            sitemapQueue.push(sitemap.href);
         }
     }
     if (sitemapQueue.length === 0) {
@@ -342,9 +377,14 @@ async function crawlSite(startAddress, onProgress = () => {}) {
         };
 
     onProgress({ status: 'discovering-sitemaps', websiteUrl: origin, completed: 0, limit: MAX_PAGES });
-    const sitemapDiscovery = await discoverSitemapPages(browserSession, origin, pathPrefix);
+    const robotsPolicy = await fetchRobotsPolicy(browserSession, origin);
+    if (!isAllowedByRobots(start.href, robotsPolicy.rules)) {
+        throw new Error('The website robots.txt policy disallows importing the starting page.');
+    }
+    const sitemapDiscovery = await discoverSitemapPages(browserSession, origin, pathPrefix, robotsPolicy.text);
     for (const sitemapPage of sitemapDiscovery.pages) {
         if (queued.size >= MAX_PAGES * 8) break;
+        if (!isAllowedByRobots(sitemapPage, robotsPolicy.rules)) continue;
         if (!queued.has(sitemapPage)) {
             queued.add(sitemapPage);
             queue.push(sitemapPage);
@@ -397,7 +437,8 @@ async function crawlSite(startAddress, onProgress = () => {}) {
                 for (const link of extracted.links || []) {
                     if (queued.size >= MAX_PAGES * 8) break;
                     const next = normalizeHttpUrl(link, origin, pathPrefix);
-                    if (!next || visited.has(next.href) || queued.has(next.href)) continue;
+                    if (!next || !isAllowedByRobots(next.href, robotsPolicy.rules) ||
+                        visited.has(next.href) || queued.has(next.href)) continue;
                     queued.add(next.href);
                     queue.push(next.href);
                 }
