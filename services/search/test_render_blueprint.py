@@ -55,5 +55,18 @@ class RenderBlueprintTests(unittest.TestCase):
         self.assertNotIn("value", {item["key"]: item for item in gateway["envVars"]}["PEANUT_SEARCH_API_KEY"])
 
 
+    def test_gateway_forwards_the_validated_api_key_to_the_index(self):
+        for relative_path in (
+            "services/search/gateway/default.conf.template",
+            "services/search/gateway/render.conf.template",
+        ):
+            configuration = (ROOT / relative_path).read_text(encoding="utf-8")
+            self.assertEqual(
+                configuration.count("proxy_set_header X-API-Key $http_x_api_key;"),
+                2,
+                relative_path,
+            )
+
+
 if __name__ == "__main__":
     unittest.main()
